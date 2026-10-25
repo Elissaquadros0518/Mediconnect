@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mediconnect_mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: mediconnect_db
+      MYSQL_ROOT_PASSWORD: your_secure_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - mediconnect_net
+
+volumes:
+  mysql_data:
+
+networks:
+  mediconnect_net:
+    driver: bridge
