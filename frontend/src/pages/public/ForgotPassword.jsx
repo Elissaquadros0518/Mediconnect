@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { authService } from '../../services/authService';
+import { Activity, Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -18,11 +19,15 @@ export default function ForgotPassword() {
     setLoading(true);
     setErrorMsg('');
 
-    // Simulate backend password reset API call (Connect to your Node.js backend here later)
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await authService.resetPassword(email);
       setSubmitted(true);
-    }, 1000);
+    } catch (err) {
+      console.error('Password reset error:', err);
+      setErrorMsg(err.message || 'Unable to process password reset. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,7 +54,7 @@ export default function ForgotPassword() {
               <CheckCircle2 className="w-14 h-14 text-emerald-600 mx-auto animate-bounce" />
               <h3 className="text-xl font-extrabold text-slate-900">Check Your Email</h3>
               <p className="text-sm text-slate-600 leading-relaxed">
-                We have sent password recovery instructions securely to <strong className="text-slate-900">{email}</strong>.
+                We have sent Supabase password recovery instructions securely to <strong className="text-slate-900">{email}</strong>.
               </p>
               <div className="pt-4">
                 <Link 
@@ -65,21 +70,22 @@ export default function ForgotPassword() {
             <form onSubmit={handlePasswordReset} className="space-y-6">
               
               <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">Forgot Your Password?</h3>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">Reset Password</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Enter the email address linked to your MediConnect account and we'll send you a secure reset link.
+                  Enter your registered account email to receive a password reset link.
                 </p>
               </div>
 
               {errorMsg && (
-                <div className="bg-red-50 text-red-700 text-xs p-3 rounded-xl border border-red-200">
-                  {errorMsg}
+                <div className="bg-red-50 text-red-700 text-xs p-3.5 rounded-xl border border-red-200 flex items-start space-x-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{errorMsg}</span>
                 </div>
               )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Email Address
+                  Registered Email Address
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -99,24 +105,18 @@ export default function ForgotPassword() {
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition text-sm flex items-center justify-center space-x-2"
+                className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition text-sm flex items-center justify-center space-x-2 disabled:opacity-50"
               >
-                {loading ? (
-                  <span>Sending Recovery Link...</span>
-                ) : (
-                  <span>Send Reset Instructions</span>
-                )}
+                {loading ? <span>Sending Link...</span> : <span>Send Recovery Instructions</span>}
               </button>
 
               <div className="text-center pt-2">
-                <Link 
-                  to="/login"
-                  className="inline-flex items-center space-x-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition"
-                >
+                <Link to="/login" className="text-xs font-semibold text-slate-500 hover:text-slate-800 flex items-center justify-center space-x-1">
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Back to Login</span>
+                  <span>Back to Sign In</span>
                 </Link>
               </div>
+
             </form>
           )}
 

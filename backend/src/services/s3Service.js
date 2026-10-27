@@ -2,23 +2,31 @@ import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3Client, S3_BUCKET } from '../config/aws.js';
 
+function getActiveBucket() {
+  if (!process.env.S3_BUCKET) {
+    throw new Error('S3_BUCKET is required');
+  }
+  return process.env.S3_BUCKET;
+}
+
 export async function generateUploadPresignedUrl(objectKey, mimeType) {
+  const bucket = getActiveBucket();
   const command = new PutObjectCommand({
-    Bucket: S3_BUCKET,
+    Bucket: bucket,
     Key: objectKey,
     ContentType: mimeType
   });
-  // URL expires in 5 minutes
-  const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
-  return uploadUrl;
+  return await getSignedUrl(s3Client, command, { expiresIn: 300 });
 }
 
 export async function generateDownloadPresignedUrl(objectKey) {
+  const bucket = getActiveBucket();
   const command = new GetObjectCommand({
-    Bucket: S3_BUCKET,
+    Bucket: bucket,
     Key: objectKey
   });
-  // URL expires in 10 minutes
-  const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 600 });
-  return downloadUrl;
+  return await getSignedUrl(s3Client, command, { expiresIn: 600 });
 }
+
+export const createUploadUrl = generateUploadPresignedUrl;
+export const createDownloadUrl = generateDownloadPresignedUrl;

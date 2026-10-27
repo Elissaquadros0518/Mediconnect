@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  ArrowLeft, FileText, CheckCircle2, Save, Upload, Pill, Stethoscope, ShieldCheck, Calendar, User 
+  ArrowLeft, FileText, CheckCircle2, Save, Pill, Stethoscope, ShieldCheck, Calendar, User, AlertCircle 
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { visitSummaryService } from '../../services/visitSummaryService';
 
 export default function VisitSummaryEditor() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Form State for Visit Summary
   const [patientName, setPatientName] = useState('Amit Patel (ID: #101)');
@@ -14,21 +17,38 @@ export default function VisitSummaryEditor() {
   const [clinicalNotes, setClinicalNotes] = useState('Patient presented with mild chest tightness during physical exertion. ECG shows normal sinus rhythm with mild ST changes. Advised lifestyle modification and continuation of prescribed statins.');
   const [medications, setMedications] = useState('Atorvastatin 20mg - 1 tablet daily at night\nAspirin 75mg - 1 tablet daily post lunch');
   const [followUpDate, setFollowUpDate] = useState('2026-12-02');
+  
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSaveSummary = (e) => {
+  const handleSaveSummary = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setErrorMsg('');
 
-    // Simulate backend submission & S3 encryption sync
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      await visitSummaryService.saveSummary({
+        appointmentId: '11111111-2222-3333-4444-555555555555',
+        doctorId: user?.id,
+        patientId: 'patient-demo-id',
+        summary: clinicalNotes,
+        diagnosis,
+        medications,
+        followUpDate,
+        isPublished: true
+      });
+
       setSuccess(true);
       setTimeout(() => {
         navigate('/doctor/dashboard');
-      }, 1800);
-    }, 1200);
+      }, 2000);
+    } catch (err) {
+      console.error('Save summary error:', err);
+      setErrorMsg(err.message || 'Unable to save visit summary.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -50,7 +70,7 @@ export default function VisitSummaryEditor() {
           <span>Clinical Documentation</span>
         </span>
         <h1 className="text-2xl md:text-3xl font-extrabold mt-2">Visit Summary & Prescription Editor</h1>
-        <p className="text-teal-100 text-sm mt-1">Draft consultation findings, prescribe medications, and sync encrypted records directly to the patient's S3 vault.</p>
+        <p className="text-teal-100 text-sm mt-1">Draft consultation findings, prescribe medications, and publish encrypted records directly to the patient's vault.</p>
       </div>
 
       {/* Editor Form Card */}
@@ -58,45 +78,33 @@ export default function VisitSummaryEditor() {
         {success ? (
           <div className="py-16 text-center space-y-4">
             <CheckCircle2 className="w-16 h-16 text-emerald-600 mx-auto animate-bounce" />
-            <h3 className="text-xl font-extrabold text-slate-900">Summary Saved & Uploaded!</h3>
-            <p className="text-sm text-slate-500">The consultation report has been securely encrypted and saved to AWS S3.</p>
+            <h3 className="text-xl font-extrabold text-slate-900">Summary Published Successfully!</h3>
+            <p className="text-sm text-slate-500">The consultation findings and prescription have been published to the patient's Supabase medical vault.</p>
           </div>
         ) : (
           <form onSubmit={handleSaveSummary} className="space-y-6">
             
+            {errorMsg && (
+              <div className="bg-red-50 text-red-700 text-xs p-3.5 rounded-xl border border-red-200 flex items-center space-x-2">
+                <AlertCircle className="w-4 h-4 text-red-600" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             {/* Patient & Date Meta */}
-            <div className="grid sm:grid-cols-2 gap-6">
+            <div className="grid sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 text-xs">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Patient Details
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <User className="w-4 h-4" />
-                  </div>
-                  <input 
-                    type="text"
-                    disabled
-                    value={patientName}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 text-slate-700 font-semibold"
-                  />
+                <label className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Patient</label>
+                <div className="flex items-center space-x-2 font-bold text-slate-800">
+                  <User className="w-4 h-4 text-teal-600" />
+                  <span>{patientName}</span>
                 </div>
               </div>
-
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Consultation Date
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Calendar className="w-4 h-4" />
-                  </div>
-                  <input 
-                    type="date"
-                    value={consultDate}
-                    onChange={(e) => setConsultDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
-                  />
+                <label className="block font-bold text-slate-400 uppercase text-[10px] mb-1">Consultation Date</label>
+                <div className="flex items-center space-x-2 font-bold text-slate-800">
+                  <Calendar className="w-4 h-4 text-sky-600" />
+                  <span>{consultDate}</span>
                 </div>
               </div>
             </div>
@@ -104,82 +112,83 @@ export default function VisitSummaryEditor() {
             {/* Primary Diagnosis */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Primary Diagnosis
+                Clinical Diagnosis
               </label>
-              <input 
-                type="text"
-                required
-                placeholder="e.g., Hypertension, Acute Bronchitis..."
-                value={diagnosis}
-                onChange={(e) => setDiagnosis(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-              />
+              <div className="relative">
+                <Stethoscope className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <input 
+                  type="text"
+                  required
+                  value={diagnosis}
+                  onChange={(e) => setDiagnosis(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                />
+              </div>
             </div>
 
-            {/* Clinical Notes / Findings */}
+            {/* Clinical Observations / Notes */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Clinical Observations & Notes
+                Doctor's Observations & Findings
               </label>
               <textarea 
-                rows="4"
+                rows={4}
                 required
-                placeholder="Enter detailed physician notes, symptoms evaluated, and diagnostic insights..."
                 value={clinicalNotes}
                 onChange={(e) => setClinicalNotes(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
-            {/* Prescriptions & Medications */}
+            {/* Medications & Prescription */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1 flex items-center space-x-1.5">
-                <Pill className="w-4 h-4 text-indigo-600" />
+                <Pill className="w-3.5 h-3.5 text-teal-600" />
                 <span>Prescribed Medications & Dosage</span>
               </label>
               <textarea 
-                rows="3"
-                placeholder="List medications, strength, and frequency (one per line)..."
+                rows={3}
                 value={medications}
                 onChange={(e) => setMedications(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 font-mono"
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
             {/* Follow-up Date */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Recommended Follow-up Date
+                Recommended Follow-up Review Date
               </label>
               <input 
                 type="date"
                 value={followUpDate}
                 onChange={(e) => setFollowUpDate(e.target.value)}
-                className="w-full sm:w-1/2 px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                className="w-full sm:w-64 px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
 
             {/* Submit Action */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
-              <button 
-                type="button"
-                onClick={() => navigate(-1)}
-                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition"
-              >
-                Cancel
-              </button>
+            <div className="pt-2">
               <button 
                 type="submit"
                 disabled={saving}
-                className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center space-x-2"
+                className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-bold px-8 py-3.5 rounded-xl shadow-lg transition text-xs flex items-center justify-center space-x-2 disabled:opacity-50"
               >
-                <Save className="w-4 h-4" />
-                <span>{saving ? 'Encrypting & Syncing to S3...' : 'Save & Publish Summary'}</span>
+                {saving ? (
+                  <span>Publishing Summary...</span>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Publish Consultation Summary to Patient Vault</span>
+                  </>
+                )}
               </button>
             </div>
+
           </form>
         )}
       </div>
+
     </div>
   );
 }

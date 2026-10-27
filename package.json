@@ -1,1 +1,11 @@
-{}
+{
+  "name": "mediconnect-cloud",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test:supabase": "node supabase/test_integration.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0"
+  }
+}

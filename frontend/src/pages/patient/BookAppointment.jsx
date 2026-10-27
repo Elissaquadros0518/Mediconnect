@@ -1,49 +1,113 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  Calendar as CalendarIcon, Clock, Stethoscope, User, Video, Building, ArrowLeft, CheckCircle2, ShieldCheck 
+  Calendar as CalendarIcon, Clock, Stethoscope, ArrowLeft, CheckCircle2, ShieldCheck, Loader2, AlertCircle 
 } from 'lucide-react';
+import { doctorService } from '../../services/doctorService';
+import { appointmentService } from '../../services/appointmentService';
 
 export default function BookAppointment() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preSelectedDoctorId = searchParams.get('doctorId');
 
-  // Mock list of doctors available for booking
-  const availableDoctors = [
-    { id: 1, name: 'Dr. Sarah Jenkins', specialty: 'Cardiology Specialist', location: 'Cumballa Hill Center, Mumbai' },
-    { id: 2, name: 'Dr. Robert Chen', specialty: 'General Medicine & Primary Care', location: 'Bandra West Clinic, Mumbai' },
-    { id: 3, name: 'Dr. Ananya Sharma', specialty: 'Pediatrics & Child Care', location: 'Powai Medical Hub, Mumbai' },
-    { id: 4, name: 'Dr. Rajesh Nair', specialty: 'Emergency & Critical Triage', location: 'Main Hospital Campus, Mumbai' }
-  ];
-
-  // Available time slots
-  const timeSlots = ['09:00 AM', '10:30 AM', '11:45 AM', '02:00 PM', '03:30 PM', '05:00 PM'];
-
-  // Form State
-  const [selectedDoctor, setSelectedDoctor] = useState(availableDoctors[0]);
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState(timeSlots[0]);
-  const [consultType, setConsultType] = useState('In-Person');
+  const [availableDoctors, setAvailableDoctors] = useState([]);
+  const [selectedDoctor, setSelectedDoctor] = useState(null);
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().split('T')[0];
+  });
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [selectedSlot, setSelectedSlot] = useState(null);
   const [notes, setNotes] = useState('');
+  
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const handleSubmitBooking = (e) => {
+  // 1. Load Doctors
+  useEffect(() => {
+    async function loadDoctors() {
+      setLoadingDoctors(true);
+      try {
+        const docs = await doctorService.getPublicDoctors();
+        setAvailableDoctors(docs);
+        if (preSelectedDoctorId) {
+          const match = docs.find(d => String(d.id) === String(preSelectedDoctorId));
+          if (match) setSelectedDoctor(match);
+          else if (docs.length > 0) setSelectedDoctor(docs[0]);
+        } else if (docs.length > 0) {
+          setSelectedDoctor(docs[0]);
+        }
+      } catch (err) {
+        console.error('Error fetching doctors:', err);
+      } finally {
+        setLoadingDoctors(false);
+      }
+    }
+    loadDoctors();
+  }, [preSelectedDoctorId]);
+
+  // 2. Load Slots when Doctor or Date changes
+  useEffect(() => {
+    if (!selectedDoctor?.id) return;
+    async function loadSlots() {
+      setLoadingSlots(true);
+      try {
+        const slots = await doctorService.getDoctorSlots(selectedDoctor.id, date);
+        setAvailableSlots(slots);
+        const firstAvailable = slots.find(s => s.status === 'Available');
+        setSelectedSlot(firstAvailable || slots[0] || null);
+      } catch (err) {
+        console.error('Error fetching slots:', err);
+      } finally {
+        setLoadingSlots(false);
+      }
+    }
+    loadSlots();
+  }, [selectedDoctor?.id, date]);
+
+  const handleSubmitBooking = async (e) => {
     e.preventDefault();
-    if (!date) {
-      alert('Please select an appointment date.');
+    setErrorMsg('');
+
+    if (!selectedDoctor) {
+      setErrorMsg('Please select a physician.');
+      return;
+    }
+    if (!selectedSlot) {
+      setErrorMsg('Please select an available consultation slot.');
+      return;
+    }
+    if (selectedSlot.status !== 'Available') {
+      setErrorMsg('The selected slot is already booked. Please pick another slot.');
       return;
     }
 
     setSubmitting(true);
 
-    // Simulate backend / Supabase appointment insertion delay
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      await appointmentService.bookAppointment({
+        slotId: selectedSlot.id,
+        doctorId: selectedDoctor.id,
+        reason: notes || 'General Specialist Consultation',
+        date,
+        time: selectedSlot.time
+      });
+
       setSuccess(true);
       setTimeout(() => {
         navigate('/patient/dashboard');
-      }, 1800);
-    }, 1200);
+      }, 2000);
+    } catch (err) {
+      console.error('Booking error:', err);
+      setErrorMsg(err.message || 'Unable to book consultation. Please verify slot availability.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -64,7 +128,9 @@ export default function BookAppointment() {
           Digital Scheduling
         </span>
         <h1 className="text-2xl md:text-3xl font-extrabold mt-2">Book a Specialist Consultation</h1>
-        <p className="text-teal-100 text-sm mt-1">Schedule your next in-person visit or telehealth consultation securely.</p>
+        <p className="text-teal-100 text-sm mt-1">
+          Atomic Supabase scheduling ensures zero double-booking and instant calendar sync.
+        </p>
       </div>
 
       {/* Booking Form Card */}
@@ -73,136 +139,149 @@ export default function BookAppointment() {
           <div className="py-16 text-center space-y-4">
             <CheckCircle2 className="w-16 h-16 text-emerald-600 mx-auto animate-bounce" />
             <h3 className="text-xl font-extrabold text-slate-900">Appointment Confirmed!</h3>
-            <p className="text-sm text-slate-500">Your appointment has been successfully scheduled and synced with the doctor's calendar.</p>
+            <p className="text-sm text-slate-500">
+              Your appointment with <strong className="text-teal-800">{selectedDoctor?.name}</strong> has been booked and saved in PostgreSQL.
+            </p>
           </div>
         ) : (
           <form onSubmit={handleSubmitBooking} className="space-y-6">
             
+            {errorMsg && (
+              <div className="bg-red-50 text-red-700 text-xs p-3.5 rounded-xl border border-red-200 flex items-start space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </div>
+            )}
+
             {/* 1. Select Doctor / Specialist */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                 Select Physician / Specialist
               </label>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {availableDoctors.map((doc) => (
-                  <div 
-                    key={doc.id}
-                    onClick={() => setSelectedDoctor(doc)}
-                    className={`border rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between ${
-                      selectedDoctor.id === doc.id 
-                        ? 'border-teal-600 bg-teal-50/50 shadow-sm' 
-                        : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900 text-sm">{doc.name}</span>
-                        <Stethoscope className={`w-4 h-4 ${selectedDoctor.id === doc.id ? 'text-teal-600' : 'text-slate-400'}`} />
-                      </div>
-                      <p className="text-xs text-teal-700 font-medium mt-0.5">{doc.specialty}</p>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-3">{doc.location}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 2. Consultation Type */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Consultation Mode
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  onClick={() => setConsultType('In-Person')}
-                  className={`py-3 px-4 rounded-xl border text-sm font-semibold flex items-center justify-center space-x-2 transition ${
-                    consultType === 'In-Person'
-                      ? 'border-teal-600 bg-teal-50 text-teal-800'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Building className="w-4 h-4" />
-                  <span>In-Person Visit</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setConsultType('Telehealth')}
-                  className={`py-3 px-4 rounded-xl border text-sm font-semibold flex items-center justify-center space-x-2 transition ${
-                    consultType === 'Telehealth'
-                      ? 'border-teal-600 bg-teal-50 text-teal-800'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  <Video className="w-4 h-4" />
-                  <span>Telehealth Video</span>
-                </button>
-              </div>
-            </div>
-
-            {/* 3. Date and Time Selection */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Appointment Date
-                </label>
-                <div className="relative">
-                  <input 
-                    type="date"
-                    required
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                  />
+              {loadingDoctors ? (
+                <div className="py-8 text-center">
+                  <Loader2 className="w-6 h-6 text-teal-600 animate-spin mx-auto" />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                  Available Time Slot
-                </label>
-                <select 
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
-                >
-                  {timeSlots.map((slot, index) => (
-                    <option key={index} value={slot}>{slot}</option>
+              ) : (
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {availableDoctors.map((doc) => (
+                    <div 
+                      key={doc.id}
+                      onClick={() => setSelectedDoctor(doc)}
+                      className={`border rounded-2xl p-4 cursor-pointer transition flex flex-col justify-between ${
+                        selectedDoctor?.id === doc.id 
+                          ? 'border-teal-600 bg-teal-50/50 shadow-sm' 
+                          : 'border-slate-200 bg-slate-50/50 hover:bg-slate-100/50'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-slate-900 text-sm">{doc.name}</span>
+                          <Stethoscope className={`w-4 h-4 ${selectedDoctor?.id === doc.id ? 'text-teal-600' : 'text-slate-400'}`} />
+                        </div>
+                        <p className="text-xs text-teal-700 font-medium mt-0.5">{doc.specialty}</p>
+                        <p className="text-[11px] text-slate-500 mt-1">{doc.qualification}</p>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-slate-200/50 flex justify-between items-center text-xs">
+                        <span className="text-slate-400">Consultation:</span>
+                        <span className="font-bold text-slate-800">₹{doc.consultation_fee || 1000}</span>
+                      </div>
+                    </div>
                   ))}
-                </select>
-              </div>
+                </div>
+              )}
             </div>
 
-            {/* 4. Reason for Visit / Notes */}
+            {/* 2. Select Date */}
             <div>
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                Reason for Visit / Symptoms (Optional)
+                Preferred Date
               </label>
-              <textarea 
-                rows="3"
-                placeholder="Describe your symptoms or reason for consultation..."
+              <div className="relative">
+                <input 
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50/50"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* 3. Select Time Slot */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                Available Time Slots
+              </label>
+              {loadingSlots ? (
+                <div className="py-4 text-center">
+                  <Loader2 className="w-5 h-5 text-teal-600 animate-spin mx-auto" />
+                </div>
+              ) : availableSlots.length === 0 ? (
+                <p className="text-xs text-slate-400 py-3">No availability slots configured for this date.</p>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {availableSlots.map((slot) => {
+                    const isAvailable = slot.status === 'Available';
+                    const isSelected = selectedSlot?.id === slot.id;
+                    return (
+                      <button
+                        key={slot.id}
+                        type="button"
+                        disabled={!isAvailable}
+                        onClick={() => setSelectedSlot(slot)}
+                        className={`py-3 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                          !isAvailable
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed line-through'
+                            : isSelected
+                            ? 'bg-teal-600 text-white shadow-sm'
+                            : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>{slot.time}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* 4. Consultation Reason / Notes */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                Reason for Visit / Symptoms
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Describe your current symptoms, health concerns, or routine review purpose..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50/50"
               />
             </div>
 
-            {/* Submit Action */}
-            <button 
+            {/* Submit Button */}
+            <button
               type="submit"
-              disabled={submitting}
-              className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 rounded-xl shadow transition text-sm flex items-center justify-center space-x-2"
+              disabled={submitting || !selectedSlot || selectedSlot.status !== 'Available'}
+              className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition text-sm flex items-center justify-center space-x-2 disabled:opacity-50"
             >
               {submitting ? (
-                <span>Confirming Appointment...</span>
+                <span>Confirming Slot Reservation...</span>
               ) : (
-                <span>Confirm & Book Appointment</span>
+                <>
+                  <CalendarIcon className="w-4 h-4" />
+                  <span>Confirm & Reserve Appointment</span>
+                </>
               )}
             </button>
+
           </form>
         )}
       </div>
+
     </div>
   );
 }

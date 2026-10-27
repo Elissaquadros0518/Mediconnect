@@ -1,47 +1,57 @@
-import jwt from 'jsonwebtoken';
-import jwksClient from 'jwks-rsa';
 import dotenv from 'dotenv';
+import { supabase } from '../config/supabase.js';
 
 dotenv.config();
 
-const client = jwksClient({
-  jwksUri: `https://cognito-idp.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${process.env.COGNITO_USER_POOL_ID || 'ap-south-1_dummy'}/.well-known/jwks.json`,
-  rateLimit: true,
-  jwksRequestsPerMinute: 5
-});
-
-function getKey(header, callback) {
-  client.getSigningKey(header.kid, function (err, key) {
-    if (err) return callback(err);
-    const signingKey = key.publicKey || key.rsaPublicKey;
-    callback(null, signingKey);
-  });
-}
-
 export const authenticateToken = async (req, res, next) => {
-  if (process.env.AWS_USE_LOCAL_AUTH === 'true' && process.env.NODE_ENV === 'development') {
-    const mockRole = req.headers['x-mock-role'] || 'PATIENT';
-    const mockUserId = req.headers['x-mock-user-id'] || 1;
-    req.user = { id: parseInt(mockUserId), role: mockRole, email: 'dev@mediconnect.local' };
+  // Check bypass for local mock testing if explicitly enabled
+  if (process.env.LOCAL_AUTH_BYPASS === 'true' || (process.env.AWS_USE_LOCAL_AUTH === 'true' && process.env.NODE_ENV === 'development')) {
+    const mockRole = req?.headers ? (req.headers['x-mock-role'] || 'PATIENT') : 'PATIENT';
+    const mockUserId = req?.headers ? (req.headers['x-mock-user-id'] || 1) : 1;
+    req.user = { id: mockUserId, role: mockRole.toLowerCase(), email: 'dev@mediconnect.local' };
     return next();
   }
 
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Access token missing or malformed' });
+  const authHeader = req?.headers ? (req.headers['authorization'] || req.headers['Authorization']) : null;
+  const token = authHeader && typeof authHeader === 'string' && authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Access token missing or malformed' });
+  }
 
-  jwt.verify(token, getKey, { algorithms: ['RS256'] }, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Invalid or expired authentication token' });
-    req.user = user;
+  try {
+    // Verify token with Supabase Auth
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return res.status(403).json({ error: 'Invalid or expired authentication token' });
+    }
+
+    // Attach user profile role
+    const role = (user.user_metadata?.role || 'patient').toLowerCase();
+    req.user = {
+      id: user.id,
+      email: user.email,
+      role,
+      user_metadata: user.user_metadata
+    };
     next();
-  });
+  } catch (err) {
+    return res.status(403).json({ error: 'Authentication verification failed: ' + err.message });
+  }
 };
 
+export const requireAuth = authenticateToken;
+
 export const requireRole = (allowedRoles) => {
+  const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
+  const normalizedAllowed = rolesArray.map(r => r.toLowerCase());
+
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    const userRole = (req.user?.role || '').toLowerCase();
+    if (!req.user || !normalizedAllowed.includes(userRole)) {
       return res.status(403).json({ error: 'Access denied: insufficient role permissions' });
     }
     next();
   };
 };
+
+export default { authenticateToken, requireAuth, requireRole };

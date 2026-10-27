@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/common/Navbar';
 import { Sidebar } from './components/common/Sidebar';
+import ProtectedRoute from './components/guards/ProtectedRoute';
+import RoleGuard from './components/guards/RoleGuard';
 
 // Pages - Public
 import Landing from './pages/public/Landing';
@@ -55,26 +57,116 @@ export default function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Patient Portals */}
-        <Route path="/patient/dashboard" element={<Layout><PatientDashboard /></Layout>} />
-        <Route path="/patient/records" element={<Layout><PatientRecords /></Layout>} />
-        <Route path="/patient/book-appointment" element={<Layout><BookAppointment /></Layout>} />
-        <Route path="/patient/notifications" element={<Layout><PatientNotifications /></Layout>} />
-        <Route path="/patient/profile" element={<Layout><PatientProfile /></Layout>} />
+        {/* Patient Portals (Guarded) */}
+        <Route path="/patient/dashboard" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['patient', 'admin']}>
+              <Layout><PatientDashboard /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/patient/records" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['patient', 'admin']}>
+              <Layout><PatientRecords /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/patient/book-appointment" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['patient', 'admin']}>
+              <Layout><BookAppointment /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/patient/notifications" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['patient', 'admin']}>
+              <Layout><PatientNotifications /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/patient/profile" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['patient', 'admin']}>
+              <Layout><PatientProfile /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
 
-        {/* Doctor Portals */}
-        <Route path="/doctor/dashboard" element={<Layout><DoctorDashboard /></Layout>} />
-        <Route path="/doctor/appointments" element={<Layout><DoctorAppointments /></Layout>} />
-        <Route path="/doctor/manage-slots" element={<Layout><ManageSlots /></Layout>} />
-        <Route path="/doctor/patient-record/:id" element={<Layout><PatientRecordView /></Layout>} />
-        <Route path="/doctor/visit-summary" element={<Layout><VisitSummaryEditor /></Layout>} />
+        {/* Doctor Portals (Guarded) */}
+        <Route path="/doctor/dashboard" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><DoctorDashboard /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/appointments" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><DoctorAppointments /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/manage-slots" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><ManageSlots /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/patient-record/:id" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><PatientRecordView /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/visit-summary" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><VisitSummaryEditor /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
 
-        {/* Admin Portals & Management Views */}
-        <Route path="/admin/dashboard" element={<Layout><AdminDashboard /></Layout>} />
-        <Route path="/admin/appointments" element={<Layout><AdminAppointments /></Layout>} />
-        <Route path="/admin/doctors" element={<Layout><AdminDoctors /></Layout>} />
-        <Route path="/admin/users" element={<Layout><AdminUsers /></Layout>} />
-        <Route path="/admin/audit-logs" element={<Layout><AuditLogs /></Layout>} />
+        {/* Admin Portals & Management Views (Guarded) */}
+        <Route path="/admin/dashboard" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['admin']}>
+              <Layout><AdminDashboard /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/appointments" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['admin']}>
+              <Layout><AdminAppointments /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/doctors" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['admin']}>
+              <Layout><AdminDoctors /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/users" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['admin']}>
+              <Layout><AdminUsers /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/audit-logs" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['admin']}>
+              <Layout><AuditLogs /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
 
         {/* Fallback Route */}
         <Route path="*" element={<Navigate to="/" replace />} />
