@@ -10,17 +10,42 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Clean existing if re-running
-DROP TABLE IF EXISTS audit_logs CASCADE;
-DROP TABLE IF EXISTS notifications CASCADE;
-DROP TABLE IF EXISTS visit_summaries CASCADE;
-DROP TABLE IF EXISTS medical_documents CASCADE;
-DROP TABLE IF EXISTS appointments CASCADE;
-DROP TABLE IF EXISTS availability_slots CASCADE;
-DROP TABLE IF EXISTS doctor_profiles CASCADE;
-DROP TABLE IF EXISTS specialties CASCADE;
-DROP TABLE IF EXISTS user_preferences CASCADE;
-DROP TABLE IF EXISTS profiles CASCADE;
+-- Preserve legacy tables non-destructively (NO DROP CASCADE)
+DO $$ 
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'legacy_users') THEN
+        ALTER TABLE public.users RENAME TO legacy_users;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'doctors')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'legacy_doctors') THEN
+        ALTER TABLE public.doctors RENAME TO legacy_doctors;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'availability_slots')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'legacy_availability_slots') THEN
+        ALTER TABLE public.availability_slots RENAME TO legacy_availability_slots;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'appointments')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'legacy_appointments') THEN
+        ALTER TABLE public.appointments RENAME TO legacy_appointments;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'medical_documents')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'legacy_medical_documents') THEN
+        ALTER TABLE public.medical_documents RENAME TO legacy_medical_documents;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'visit_summaries')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'legacy_visit_summaries') THEN
+        ALTER TABLE public.visit_summaries RENAME TO legacy_visit_summaries;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'notifications')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'legacy_notifications') THEN
+        ALTER TABLE public.notifications RENAME TO legacy_notifications;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'audit_logs')
+       AND NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'legacy_audit_logs') THEN
+        ALTER TABLE public.audit_logs RENAME TO legacy_audit_logs;
+    END IF;
+END $$;
 
 -- ----------------------------------------------------------------------------
 -- 1. PROFILES TABLE

@@ -1,10 +1,12 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.js';
 
 export const notificationService = {
   /**
    * Fetch persistent notifications for the current user
    */
-  async getUserNotifications(userId) {
+  async getUserNotifications(userId, role = 'patient') {
+    const isDoctor = role?.toLowerCase() === 'doctor';
+
     try {
       const { data, error } = await supabase
         .from('notifications')
@@ -20,11 +22,45 @@ export const notificationService = {
           message: n.message,
           time: new Date(n.created_at).toLocaleString(),
           read: Boolean(n.read_at),
-          link: n.type === 'DOCUMENT' ? '/patient/records' : '/patient/dashboard'
+          link: isDoctor
+            ? (n.type === 'APPOINTMENT' ? '/doctor/appointments' : '/doctor/dashboard')
+            : (n.type === 'DOCUMENT' ? '/patient/records' : '/patient/dashboard')
         }));
       }
     } catch (err) {
       console.warn('[notificationService] getUserNotifications fallback:', err.message);
+    }
+
+    if (isDoctor) {
+      return [
+        {
+          id: 'doc-notif-1',
+          type: 'appointment',
+          title: 'New Patient Consultation Scheduled',
+          message: 'Patient Amit Patel has booked a consultation for Today at 10:30 AM.',
+          time: '15 minutes ago',
+          read: false,
+          link: '/doctor/appointments'
+        },
+        {
+          id: 'doc-notif-2',
+          type: 'appointment',
+          title: 'Pending Consultation Request',
+          message: 'Patient Priya Deshmukh has requested a routine checkup consultation.',
+          time: '1 hour ago',
+          read: false,
+          link: '/doctor/appointments'
+        },
+        {
+          id: 'doc-notif-3',
+          type: 'summary',
+          title: 'Summary Published',
+          message: 'Visit summary for Meera Nair was successfully encrypted and archived.',
+          time: '1 day ago',
+          read: true,
+          link: '/doctor/dashboard'
+        }
+      ];
     }
 
     return [
