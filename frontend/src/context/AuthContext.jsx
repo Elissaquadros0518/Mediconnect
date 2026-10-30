@@ -17,41 +17,94 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
-      const { data: profile, error } = await supabase
+      let { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', authUser.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
         console.warn('[AuthContext] Could not load profile:', error.message);
       }
 
-      const role = (profile?.role || authUser.user_metadata?.role || 'PATIENT').toLowerCase();
+      // If no profile exists yet in the database, attempt self-healing from auth metadata
+      const metaRole = authUser.user_metadata?.role?.toUpperCase();
+      const safeMetaRole = metaRole === 'DOCTOR' ? 'DOCTOR' : (authUser.app_metadata?.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'PATIENT');
+
+      if (!profile && authUser.id) {
+        try {
+          const { data: createdProfile } = await supabase
+            .from('profiles')
+            .upsert({
+              id: authUser.id,
+              full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+              phone: authUser.user_metadata?.phone || null,
+              role: safeMetaRole,
+              account_status: 'ACTIVE'
+            }, { onConflict: 'id' })
+            .select()
+            .maybeSingle();
+
+          if (createdProfile) {
+            profile = createdProfile;
+          }
+        } catch (healErr) {
+          console.warn('[AuthContext] Profile self-heal notice:', healErr.message);
+        }
+      }
+
+      // Determine authoritative role:
+      // Priority 1: PostgreSQL `profiles` table (authoritative)
+      // Priority 2: Supabase Auth metadata (if profiles table was unreachable during registration)
+      // Requirement: NEVER silently convert doctor or admin to patient when lookup fails
+      let resolvedRole = null;
+      if (profile?.role) {
+        resolvedRole = profile.role.toLowerCase();
+      } else if (authUser.app_metadata?.role?.toUpperCase() === 'ADMIN') {
+        resolvedRole = 'admin';
+      } else if (authUser.user_metadata?.role?.toUpperCase() === 'DOCTOR') {
+        resolvedRole = 'doctor';
+      } else if (authUser.user_metadata?.role?.toUpperCase() === 'PATIENT') {
+        resolvedRole = 'patient';
+      }
+
       const name = profile?.full_name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0];
 
       const fullUser = {
         id: authUser.id,
         email: authUser.email,
         name,
-        role,
+        role: resolvedRole,
         accountStatus: profile?.account_status || 'ACTIVE',
         avatarPath: profile?.avatar_path,
         phone: profile?.phone,
-        profile: profile || null
+        profile: profile || null,
+        profileIncomplete: !profile || !resolvedRole
       };
 
       setUser(fullUser);
       return fullUser;
     } catch (err) {
       console.error('[AuthContext] Error in fetchUserProfile:', err);
+      // Resilient fallback: preserve the user's role from auth metadata, never silently force doctor or admin to patient
+      const metaRole = authUser.user_metadata?.role?.toUpperCase();
+      let fallbackRole = null;
+      if (authUser.app_metadata?.role?.toUpperCase() === 'ADMIN') {
+        fallbackRole = 'admin';
+      } else if (metaRole === 'DOCTOR') {
+        fallbackRole = 'doctor';
+      } else if (metaRole === 'PATIENT') {
+        fallbackRole = 'patient';
+      }
+
       const fallbackUser = {
         id: authUser.id,
         email: authUser.email,
-        name: authUser.email?.split('@')[0],
-        role: 'patient',
+        name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+        role: fallbackRole,
         accountStatus: 'ACTIVE',
-        profile: null
+        profile: null,
+        profileIncomplete: true
       };
       setUser(fallbackUser);
       return fallbackUser;

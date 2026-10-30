@@ -60,6 +60,50 @@ export const adminService = {
   },
 
   /**
+   * Admin-controlled role assignment to safely promote or correct an account's role
+   */
+  async updateUserRole(userId, newRole) {
+    const safeRole = newRole.toUpperCase();
+    if (!['PATIENT', 'DOCTOR', 'ADMIN'].includes(safeRole)) {
+      throw new Error('Invalid role specified.');
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        role: safeRole,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.warn('[adminService] updateUserRole error:', error.message);
+      throw error;
+    }
+
+    // If assigned to DOCTOR, guarantee doctor_profiles record exists
+    if (safeRole === 'DOCTOR') {
+      try {
+        await supabase
+          .from('doctor_profiles')
+          .upsert({
+            user_id: userId,
+            qualification: 'Specialist Physician',
+            registration_number: `MED-REG-${String(userId).slice(0, 8)}`,
+            verification_status: 'APPROVED',
+            is_public: true
+          }, { onConflict: 'user_id' });
+      } catch (docErr) {
+        console.warn('[adminService] doctor_profiles sync:', docErr.message);
+      }
+    }
+
+    return data;
+  },
+
+  /**
    * Fetch doctor roster for admin approval
    */
   async getDoctorRoster() {

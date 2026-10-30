@@ -24,6 +24,36 @@ export const authService = {
     });
 
     if (error) throw error;
+
+    // Proactively initialize profile row if an active session is returned
+    if (data?.user && data?.session) {
+      try {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            full_name: fullName,
+            phone: phone || null,
+            role: safeRole,
+            account_status: 'ACTIVE'
+          }, { onConflict: 'id' });
+
+        if (safeRole === 'DOCTOR') {
+          await supabase
+            .from('doctor_profiles')
+            .upsert({
+              user_id: data.user.id,
+              qualification: qualification || 'Specialist Physician',
+              registration_number: medicalLicense || `MED-REG-${data.user.id.slice(0, 8)}`,
+              verification_status: 'PENDING',
+              is_public: false
+            }, { onConflict: 'user_id' });
+        }
+      } catch (profileInitErr) {
+        console.warn('[authService] Direct profile sync notice:', profileInitErr.message);
+      }
+    }
+
     return data;
   },
 
@@ -106,7 +136,16 @@ export const authService = {
 
     if (error) {
       console.warn('Error fetching profile:', error.message);
-      return { id: user.id, email: user.email, role: 'PATIENT', full_name: user.email };
+      // Preserve role from user metadata if available; do NOT silently default doctors to patient
+      const metaRole = user.user_metadata?.role?.toUpperCase();
+      const resolvedRole = metaRole === 'DOCTOR' ? 'DOCTOR' : (user.app_metadata?.role === 'ADMIN' ? 'ADMIN' : (metaRole === 'PATIENT' ? 'PATIENT' : null));
+      return { 
+        id: user.id, 
+        email: user.email, 
+        role: resolvedRole, 
+        full_name: user.user_metadata?.full_name || user.email,
+        profileIncomplete: !profile
+      };
     }
 
     return profile;

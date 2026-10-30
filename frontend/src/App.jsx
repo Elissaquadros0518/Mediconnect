@@ -27,6 +27,9 @@ import DoctorAppointments from './pages/doctor/DoctorAppointments';
 import PatientRecordView from './pages/doctor/PatientRecordView';
 import VisitSummaryEditor from './pages/doctor/VisitSummaryEditor';
 import ManageSlots from './pages/doctor/ManageSlots';
+import DoctorPatients from './pages/doctor/DoctorPatients';
+import DoctorNotifications from './pages/doctor/DoctorNotifications';
+import DoctorProfile from './pages/doctor/DoctorProfile';
 
 // Pages - Admin
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -127,6 +130,27 @@ export default function App() {
           <ProtectedRoute>
             <RoleGuard allowedRoles={['doctor', 'admin']}>
               <Layout><VisitSummaryEditor /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/patients" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><DoctorPatients /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/notifications" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><DoctorNotifications /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/profile" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><DoctorProfile /></Layout>
             </RoleGuard>
           </ProtectedRoute>
         } />

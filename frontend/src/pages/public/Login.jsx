@@ -40,15 +40,16 @@ export default function Login() {
     try {
       const loggedInUser = await login({ email, password });
       
-      const targetRole = (loggedInUser?.role || role).toLowerCase();
-      if (targetRole === 'patient') {
-        navigate('/patient/dashboard', { replace: true });
-      } else if (targetRole === 'doctor') {
+      // Authoritative role resolution from PostgreSQL profile, NOT inferred from UI tab or URL
+      const targetRole = (loggedInUser?.role || '').toLowerCase();
+      if (targetRole === 'doctor') {
         navigate('/doctor/dashboard', { replace: true });
       } else if (targetRole === 'admin') {
         navigate('/admin/dashboard', { replace: true });
+      } else if (targetRole === 'patient') {
+        navigate('/patient/dashboard', { replace: true });
       } else {
-        navigate('/', { replace: true });
+        setErrorMsg('Your account profile is pending setup or role could not be verified in the database. Please contact hospital support.');
       }
     } catch (err) {
       console.error('Login error:', err);
