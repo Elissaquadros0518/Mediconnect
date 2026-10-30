@@ -102,13 +102,11 @@ BEGIN
             v_license,
             5,
             1000.00,
-            'APPROVED',
-            true,
+            'PENDING',
+            false,
             timezone('utc', now()),
             timezone('utc', now())
         ) ON CONFLICT (user_id) DO UPDATE SET
-            verification_status = 'APPROVED',
-            is_public = true,
             updated_at = timezone('utc', now());
     END IF;
 
