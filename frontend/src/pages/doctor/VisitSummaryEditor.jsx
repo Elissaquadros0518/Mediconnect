@@ -7,6 +7,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { visitSummaryService } from '../../services/visitSummaryService';
 import { appointmentService } from '../../services/appointmentService';
+import { doctorService } from '../../services/doctorService';
+import PrescriptionBuilder from '../../components/doctor/PrescriptionBuilder';
 
 export default function VisitSummaryEditor() {
   const navigate = useNavigate();
@@ -29,6 +31,7 @@ export default function VisitSummaryEditor() {
   
   // Existing summaries list
   const [pastSummaries, setPastSummaries] = useState([]);
+  const [doctorProfile, setDoctorProfile] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,13 +43,15 @@ export default function VisitSummaryEditor() {
       if (!user?.id) return;
       setLoading(true);
       try {
-        const [appts, summaries] = await Promise.all([
+        const [appts, summaries, docProf] = await Promise.all([
           appointmentService.getDoctorAppointments(user.id),
-          visitSummaryService.getDoctorSummaries(user.id)
+          visitSummaryService.getDoctorSummaries(user.id),
+          doctorService.getDoctorProfileByUserId(user.id)
         ]);
 
         setDoctorAppointments(appts);
         setPastSummaries(summaries);
+        setDoctorProfile(docProf);
 
         // If an appointment was passed in URL or pick first available
         const targetId = paramAppointmentId || (appts.length > 0 ? appts[0].id : '');
@@ -259,18 +264,18 @@ export default function VisitSummaryEditor() {
             />
           </div>
 
-          {/* Prescriptions & Medications */}
+          {/* Structured Prescription Builder (Feature 5) */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center space-x-1.5">
-              <Pill className="w-3.5 h-3.5 text-teal-600" />
-              <span>Prescribed Medications & Dosage Regimen</span>
-            </label>
-            <textarea 
-              rows={3}
-              placeholder="e.g.&#10;Atorvastatin 20mg - 1 tablet daily at night&#10;Aspirin 75mg - 1 tablet daily post lunch"
-              value={medications}
-              onChange={(e) => setMedications(e.target.value)}
-              className="w-full p-3.5 border border-slate-300 rounded-xl text-xs md:text-sm font-mono focus:outline-none focus:ring-2 focus:ring-teal-500 leading-relaxed"
+            <PrescriptionBuilder
+              medicationsText={medications}
+              onChangeText={(text) => setMedications(text)}
+              doctorInfo={doctorProfile || {
+                name: user?.name || 'Dr. Rajesh Sharma, MD',
+                specialty: 'Cardiology Specialist',
+                registrationNumber: 'MCI-2012-98421'
+              }}
+              patientName={currentAppointment?.patientName}
+              diagnosis={diagnosis}
             />
           </div>
 
