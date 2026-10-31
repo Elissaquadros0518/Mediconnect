@@ -4,6 +4,24 @@ import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
 
+export const DEMO_DOCTOR_USER = {
+  id: 'demo-doctor-uuid-001',
+  email: 'doctor@mediconnect.cloud',
+  name: 'Dr. Rajesh Sharma, MD',
+  role: 'doctor',
+  accountStatus: 'ACTIVE',
+  phone: '+91 98201 11000',
+  isDemo: true,
+  profile: {
+    id: 'demo-doctor-uuid-001',
+    full_name: 'Dr. Rajesh Sharma, MD',
+    role: 'DOCTOR',
+    account_status: 'ACTIVE',
+    phone: '+91 98201 11000'
+  },
+  profileIncomplete: false
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
@@ -114,6 +132,20 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
+    // Local Development Demo Preview Check
+    if (import.meta.env.DEV && typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlDemo = urlParams.get('demo');
+      const storedDemo = localStorage.getItem('mediconnect_demo_mode');
+
+      if (urlDemo === 'doctor' || urlDemo === 'true' || storedDemo === 'doctor') {
+        localStorage.setItem('mediconnect_demo_mode', 'doctor');
+        setUser(DEMO_DOCTOR_USER);
+        setLoading(false);
+        return;
+      }
+    }
+
     // 1. Initial Session Check
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       if (!mounted) return;
@@ -167,7 +199,28 @@ export const AuthProvider = ({ children }) => {
     return res;
   };
 
+  const enterDemoDoctorMode = () => {
+    if (!import.meta.env.DEV) return;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('mediconnect_demo_mode', 'doctor');
+    }
+    setUser(DEMO_DOCTOR_USER);
+    setLoading(false);
+  };
+
+  const exitDemoMode = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('mediconnect_demo_mode');
+    }
+    setUser(null);
+    setSession(null);
+    setLoading(false);
+  };
+
   const logout = async () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('mediconnect_demo_mode');
+    }
     await authService.signOut();
     setUser(null);
     setSession(null);
@@ -181,7 +234,18 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, login, register, logout, refreshProfile }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      session, 
+      loading, 
+      login, 
+      register, 
+      logout, 
+      refreshProfile,
+      enterDemoDoctorMode,
+      exitDemoMode,
+      isDemoMode: Boolean(user?.isDemo)
+    }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/common/Navbar';
+import DemoModeBanner from './components/common/DemoModeBanner';
 import { Sidebar } from './components/common/Sidebar';
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import RoleGuard from './components/guards/RoleGuard';
@@ -40,6 +41,7 @@ import AuditLogs from './pages/admin/AuditLogs';
 
 const Layout = ({ children }) => (
   <div className="min-h-screen flex flex-col bg-slate-50">
+    <DemoModeBanner />
     <Navbar />
     <div className="flex flex-1">
       <Sidebar />

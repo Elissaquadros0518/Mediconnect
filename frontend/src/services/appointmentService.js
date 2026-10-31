@@ -384,20 +384,98 @@ export const appointmentService = {
       };
     } catch (err) {
       console.warn('[appointmentService] getDoctorMetrics fallback:', err.message);
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+      const nextDay = new Date(Date.now() + 172800000).toISOString().split('T')[0];
+
+      const demoToday = [
+        {
+          id: 'appt-demo-1',
+          patientId: 'patient-demo-1',
+          patientName: 'Amit Patel (DEMO)',
+          patientPhone: '+91 98201 23456',
+          specialty: 'Cardiology Consultation',
+          date: today,
+          time: '10:30 AM',
+          endTimeStr: '11:00 AM',
+          rawStartTime: `${today}T10:30:00Z`,
+          status: 'CONFIRMED',
+          symptoms: 'Mild chest tightness and breathlessness during physical exertion.'
+        },
+        {
+          id: 'appt-demo-2',
+          patientId: 'patient-demo-2',
+          patientName: 'Priya Deshmukh (DEMO)',
+          patientPhone: '+91 98201 65432',
+          specialty: 'Routine Checkup',
+          date: today,
+          time: '11:45 AM',
+          endTimeStr: '12:15 PM',
+          rawStartTime: `${today}T11:45:00Z`,
+          status: 'PENDING',
+          symptoms: 'Persistent fatigue and quarterly blood panel review.'
+        }
+      ];
+
+      const demoPending = [
+        {
+          id: 'appt-demo-2',
+          patientId: 'patient-demo-2',
+          patientName: 'Priya Deshmukh (DEMO)',
+          patientPhone: '+91 98201 65432',
+          specialty: 'Routine Checkup',
+          date: today,
+          time: '11:45 AM',
+          endTimeStr: '12:15 PM',
+          rawStartTime: `${today}T11:45:00Z`,
+          status: 'PENDING',
+          symptoms: 'Persistent fatigue and quarterly blood panel review.'
+        }
+      ];
+
+      const demoUpcoming = [
+        {
+          id: 'appt-demo-3',
+          patientId: 'patient-demo-3',
+          patientName: 'Rohan Gupta (DEMO)',
+          patientPhone: '+91 98201 98765',
+          specialty: 'Cardiology Follow-up',
+          date: tomorrow,
+          time: '02:00 PM',
+          endTimeStr: '02:30 PM',
+          rawStartTime: `${tomorrow}T14:00:00Z`,
+          status: 'CONFIRMED',
+          symptoms: 'Blood pressure regulation review and ECG follow-up.'
+        },
+        {
+          id: 'appt-demo-5',
+          patientId: 'patient-demo-4',
+          patientName: 'Meera Nair (DEMO)',
+          patientPhone: '+91 98201 11223',
+          specialty: 'General Consultation',
+          date: nextDay,
+          time: '09:30 AM',
+          endTimeStr: '10:00 AM',
+          rawStartTime: `${nextDay}T09:30:00Z`,
+          status: 'CONFIRMED',
+          symptoms: 'General health evaluation and quarterly lipid panel assessment.'
+        }
+      ];
+
       return {
-        todayCount: 2,
-        pendingCount: 1,
-        upcomingCount: 2,
-        completedCount: 1,
+        todayCount: demoToday.length,
+        pendingCount: demoPending.length,
+        upcomingCount: demoUpcoming.length,
+        completedCount: 3,
         availableSlotsCount: 4,
-        totalPatientsSeen: 1,
-        todayAppointments: [],
-        pendingRequests: [],
-        upcomingAppointments: [],
+        totalPatientsSeen: 4,
+        todayAppointments: demoToday,
+        pendingRequests: demoPending,
+        upcomingAppointments: demoUpcoming,
         statusDistribution: [
-          { name: 'Confirmed', count: 2, color: '#0d9488' },
+          { name: 'Confirmed', count: 3, color: '#0d9488' },
           { name: 'Pending', count: 1, color: '#f59e0b' },
-          { name: 'Completed', count: 1, color: '#0284c7' },
+          { name: 'Completed', count: 3, color: '#0284c7' },
           { name: 'Cancelled', count: 0, color: '#ef4444' }
         ]
       };

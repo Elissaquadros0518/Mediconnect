@@ -108,196 +108,268 @@ export default function DoctorDashboard() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2">
       
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-teal-700 via-teal-800 to-sky-900 rounded-3xl p-6 md:p-8 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider flex items-center space-x-1.5 backdrop-blur-md">
-              <Stethoscope className="w-3.5 h-3.5" />
-              <span>Physician Clinical Portal</span>
-            </span>
-            {doctorProfile?.verificationStatus && (
-              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                doctorProfile.verificationStatus === 'APPROVED' 
-                  ? 'bg-emerald-400/20 text-emerald-200 border border-emerald-400/30' 
-                  : 'bg-amber-400/20 text-amber-200 border border-amber-400/30'
-              }`}>
-                {doctorProfile.verificationStatus === 'APPROVED' ? 'Verified Physician' : 'Verification Pending'}
-              </span>
-            )}
+      {/* Refined Hero Section with Professional Doctor Avatar */}
+      <div className="bg-gradient-to-r from-teal-800 via-teal-900 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-teal-700/30">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          
+          {/* Doctor Profile Header with Professional Avatar */}
+          <div className="flex items-start sm:items-center space-x-4 sm:space-x-5">
+            {/* Professional Doctor Avatar with Verification Ring */}
+            <div className="relative shrink-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-teal-400 via-teal-500 to-emerald-500 p-0.5 shadow-md flex items-center justify-center ring-4 ring-white/10">
+                <div className="w-full h-full bg-teal-950 rounded-[14px] flex items-center justify-center text-teal-100 font-extrabold text-xl sm:text-2xl tracking-tight shadow-inner">
+                  {(doctorProfile?.name || user?.name || 'Dr. S')
+                    .replace('Dr. ', '')
+                    .split(' ')
+                    .map(n => n[0])
+                    .slice(0, 2)
+                    .join('')}
+                </div>
+              </div>
+              <div 
+                className={`absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-slate-900 flex items-center justify-center text-[10px] shadow-sm ${
+                  doctorProfile?.verificationStatus === 'APPROVED' ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-950'
+                }`}
+                title={doctorProfile?.verificationStatus === 'APPROVED' ? 'Verified Physician' : 'Credentials Under Hospital Review'}
+              >
+                {doctorProfile?.verificationStatus === 'APPROVED' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                ) : (
+                  <Clock className="w-3.5 h-3.5 font-bold" />
+                )}
+              </div>
+            </div>
+
+            {/* Profile Info */}
+            <div className="space-y-1.5 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-white/10 text-teal-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center space-x-1 backdrop-blur-sm border border-white/10">
+                  <Stethoscope className="w-3 h-3 text-teal-300" />
+                  <span>Physician Portal</span>
+                </span>
+
+                {doctorProfile?.verificationStatus && (
+                  <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                    doctorProfile.verificationStatus === 'APPROVED' 
+                      ? 'bg-emerald-400/20 text-emerald-200 border border-emerald-400/30' 
+                      : 'bg-amber-400/20 text-amber-200 border border-amber-400/30'
+                  }`}>
+                    {doctorProfile.verificationStatus === 'APPROVED' ? 'Verified Physician' : 'Verification Pending'}
+                  </span>
+                )}
+
+                {user?.isDemo && (
+                  <span className="bg-amber-400 text-amber-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                    DEMO DATA
+                  </span>
+                )}
+              </div>
+
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white truncate">
+                Welcome back, {doctorProfile?.name || user?.name || 'Doctor'}
+              </h1>
+
+              <p className="text-teal-200/90 text-xs sm:text-sm max-w-2xl leading-relaxed">
+                <strong className="text-white font-semibold">{doctorProfile?.specialty || 'Cardiology'} Specialist</strong> • {doctorProfile?.qualification || 'Consultant Physician'} • Reg: <span className="text-teal-100 font-mono font-medium">{doctorProfile?.registrationNumber || 'MCI-2012-98421'}</span>
+              </p>
+            </div>
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Welcome back, {doctorProfile?.name || user?.name || 'Doctor'}
-          </h1>
-          <p className="text-teal-100 text-xs md:text-sm max-w-2xl leading-relaxed">
-            {doctorProfile?.specialty || 'General Medicine'} Specialist • Department of Clinical Consultations. Manage daily appointments, patient vaults, and write encrypted clinical summaries.
-          </p>
-        </div>
-
-        {/* Quick Top Actions */}
-        <div className="flex flex-wrap sm:flex-nowrap gap-2.5 shrink-0">
-          <Link
-            to="/doctor/manage-slots"
-            className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-4 py-3 rounded-2xl border border-white/20 shadow-sm transition flex items-center space-x-2"
-          >
-            <Clock className="w-4 h-4 text-teal-300" />
-            <span>Manage Slots</span>
-          </Link>
-          <Link
-            to="/doctor/visit-summary"
-            className="bg-white text-teal-900 hover:bg-teal-50 text-xs font-bold px-4 py-3 rounded-2xl shadow-sm transition flex items-center space-x-2"
-          >
-            <Plus className="w-4 h-4 text-teal-700" />
-            <span>New Visit Summary</span>
-          </Link>
+          {/* Quick Top Action Buttons */}
+          <div className="flex flex-wrap sm:flex-nowrap gap-2.5 shrink-0 w-full lg:w-auto pt-2 lg:pt-0">
+            <Link
+              to="/doctor/manage-slots"
+              className="flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-4 py-3 rounded-2xl border border-white/20 shadow-sm transition flex items-center justify-center space-x-2"
+            >
+              <Clock className="w-4 h-4 text-teal-300" />
+              <span>Manage Slots</span>
+            </Link>
+            <Link
+              to="/doctor/visit-summary"
+              className="flex-1 sm:flex-none bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold px-4 py-3 rounded-2xl shadow-sm transition flex items-center justify-center space-x-2 font-bold"
+            >
+              <Plus className="w-4 h-4 text-slate-950" />
+              <span>New Visit Summary</span>
+            </Link>
+            <Link
+              to="/doctor/profile"
+              className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl border border-white/20 transition hidden sm:flex items-center justify-center"
+              title="Profile Settings"
+            >
+              <UserCheck className="w-4 h-4 text-teal-200" />
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* Pending Verification Notice Banner */}
+      {/* Refined Pending Verification Notice Banner with Improved Spacing */}
       {doctorProfile?.verificationStatus === 'PENDING' && (
-        <div className="bg-amber-50 border border-amber-200 rounded-3xl p-4 sm:p-5 flex items-start space-x-3.5 text-amber-900 shadow-sm">
-          <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0 mt-0.5">
-            <AlertCircle className="w-5 h-5" />
-          </div>
-          <div className="text-xs space-y-1">
-            <p className="font-bold text-amber-950 text-sm">Credentials Verification Pending Hospital Review</p>
-            <p className="text-amber-800 leading-relaxed">
-              Your physician account has been registered and is currently in <strong>PENDING</strong> status. Under hospital compliance and safety policies, your profile and availability slots will become publicly searchable once approved by an administrator. You can still manage your schedule, configure slots, and view existing patient records.
-            </p>
+        <div className="bg-gradient-to-r from-amber-50 via-amber-50/80 to-amber-100/40 border border-amber-200 rounded-2xl p-4 sm:p-5 text-amber-900 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-start space-x-3.5">
+              <div className="p-2 bg-amber-200/80 text-amber-900 rounded-xl shrink-0 mt-0.5">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="text-xs space-y-0.5">
+                <p className="font-bold text-amber-950 text-sm">Credentials Verification Under Hospital Review</p>
+                <p className="text-amber-800 leading-relaxed max-w-3xl">
+                  Your physician account is registered in <strong className="font-bold text-amber-950">PENDING</strong> verification status. Profile directory discovery and public booking become active once approved by administration. You retain full access to manage slots, clinical triage, and consultation notes.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/doctor/profile"
+              className="text-xs font-bold text-amber-900 bg-amber-200/60 hover:bg-amber-200 px-3.5 py-1.5 rounded-xl border border-amber-300 transition whitespace-nowrap self-end sm:self-center"
+            >
+              Review Credentials
+            </Link>
           </div>
         </div>
       )}
 
-      {/* 6 Clickable Summary Metric Cards (Section 5) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
-        
-        {/* 1. Today's Appointments */}
-        <div 
-          onClick={() => { setActiveTab('today'); }}
-          className={`cursor-pointer bg-white border rounded-2xl p-4 shadow-sm hover:shadow transition flex flex-col justify-between ${
-            activeTab === 'today' ? 'border-teal-500 ring-2 ring-teal-100 bg-teal-50/20' : 'border-slate-200'
-          }`}
-        >
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Today's</span>
-            <div className="p-2 bg-teal-50 text-teal-700 rounded-xl">
-              <Calendar className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-2">
-            <p className="text-2xl font-black text-slate-900">{metrics.todayCount}</p>
-            <p className="text-[10px] text-teal-700 font-semibold mt-0.5 flex items-center">
-              <span>View Today</span>
-              <ArrowUpRight className="w-3 h-3 ml-0.5" />
-            </p>
-          </div>
+      {/* Refined 6 KPI Metric Cards with Consistent Dimensions and Sizing */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center space-x-1.5">
+            <Activity className="w-3.5 h-3.5 text-teal-600" />
+            <span>Clinical Practice Performance Metrics</span>
+          </h2>
+          {user?.isDemo && (
+            <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/80 px-2.5 py-0.5 rounded-full shadow-sm">
+              Simulated Demo Metrics
+            </span>
+          )}
         </div>
 
-        {/* 2. Pending Requests */}
-        <div 
-          onClick={() => { setActiveTab('pending'); }}
-          className={`cursor-pointer bg-white border rounded-2xl p-4 shadow-sm hover:shadow transition flex flex-col justify-between ${
-            activeTab === 'pending' ? 'border-amber-500 ring-2 ring-amber-100 bg-amber-50/20' : 'border-slate-200'
-          }`}
-        >
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Pending</span>
-            <div className="p-2 bg-amber-50 text-amber-700 rounded-xl">
-              <AlertCircle className="w-4 h-4" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+          
+          {/* 1. Today's Appointments */}
+          <div 
+            onClick={() => { setActiveTab('today'); }}
+            className={`cursor-pointer bg-white border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[118px] ${
+              activeTab === 'today' ? 'border-teal-500 ring-2 ring-teal-500/20 bg-teal-50/30' : 'border-slate-200/90'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Today's</span>
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+                <Calendar className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{metrics.todayCount}</p>
+              <p className="text-[10px] text-teal-700 font-bold mt-1 flex items-center">
+                <span>View Today</span>
+                <ArrowUpRight className="w-3 h-3 ml-0.5" />
+              </p>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-2xl font-black text-amber-600">{metrics.pendingCount}</p>
-            <p className="text-[10px] text-amber-700 font-semibold mt-0.5 flex items-center">
-              <span>Awaiting Review</span>
-              <ArrowUpRight className="w-3 h-3 ml-0.5" />
-            </p>
-          </div>
-        </div>
 
-        {/* 3. Upcoming Appointments */}
-        <div 
-          onClick={() => { setActiveTab('upcoming'); }}
-          className={`cursor-pointer bg-white border rounded-2xl p-4 shadow-sm hover:shadow transition flex flex-col justify-between ${
-            activeTab === 'upcoming' ? 'border-sky-500 ring-2 ring-sky-100 bg-sky-50/20' : 'border-slate-200'
-          }`}
-        >
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Upcoming</span>
-            <div className="p-2 bg-sky-50 text-sky-700 rounded-xl">
-              <Clock className="w-4 h-4" />
+          {/* 2. Pending Requests */}
+          <div 
+            onClick={() => { setActiveTab('pending'); }}
+            className={`cursor-pointer bg-white border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[118px] ${
+              activeTab === 'pending' ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/30' : 'border-slate-200/90'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Pending</span>
+              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight">{metrics.pendingCount}</p>
+              <p className="text-[10px] text-amber-700 font-bold mt-1 flex items-center">
+                <span>Awaiting Review</span>
+                <ArrowUpRight className="w-3 h-3 ml-0.5" />
+              </p>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-2xl font-black text-slate-900">{metrics.upcomingCount}</p>
-            <p className="text-[10px] text-sky-700 font-semibold mt-0.5 flex items-center">
-              <span>Scheduled Ahead</span>
-              <ArrowUpRight className="w-3 h-3 ml-0.5" />
-            </p>
-          </div>
-        </div>
 
-        {/* 4. Completed Consultations */}
-        <div 
-          onClick={() => navigate('/doctor/appointments?status=COMPLETED')}
-          className="cursor-pointer bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow hover:border-emerald-300 transition flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Completed</span>
-            <div className="p-2 bg-emerald-50 text-emerald-700 rounded-xl">
-              <CheckCircle2 className="w-4 h-4" />
+          {/* 3. Upcoming Appointments */}
+          <div 
+            onClick={() => { setActiveTab('upcoming'); }}
+            className={`cursor-pointer bg-white border rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[118px] ${
+              activeTab === 'upcoming' ? 'border-sky-500 ring-2 ring-sky-500/20 bg-sky-50/30' : 'border-slate-200/90'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Upcoming</span>
+              <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-700 flex items-center justify-center shrink-0">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{metrics.upcomingCount}</p>
+              <p className="text-[10px] text-sky-700 font-bold mt-1 flex items-center">
+                <span>Scheduled Ahead</span>
+                <ArrowUpRight className="w-3 h-3 ml-0.5" />
+              </p>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-2xl font-black text-slate-900">{metrics.completedCount}</p>
-            <p className="text-[10px] text-emerald-700 font-semibold mt-0.5 flex items-center">
-              <span>Consultations</span>
-              <ArrowUpRight className="w-3 h-3 ml-0.5" />
-            </p>
-          </div>
-        </div>
 
-        {/* 5. Available Slots */}
-        <div 
-          onClick={() => navigate('/doctor/manage-slots')}
-          className="cursor-pointer bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow hover:border-purple-300 transition flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Open Slots</span>
-            <div className="p-2 bg-purple-50 text-purple-700 rounded-xl">
-              <Activity className="w-4 h-4" />
+          {/* 4. Completed Consultations */}
+          <div 
+            onClick={() => navigate('/doctor/appointments?status=COMPLETED')}
+            className="cursor-pointer bg-white border border-slate-200/90 hover:border-emerald-400 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[118px]"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Completed</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{metrics.completedCount}</p>
+              <p className="text-[10px] text-emerald-700 font-bold mt-1 flex items-center">
+                <span>Consultations</span>
+                <ArrowUpRight className="w-3 h-3 ml-0.5" />
+              </p>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-2xl font-black text-slate-900">{metrics.availableSlotsCount}</p>
-            <p className="text-[10px] text-purple-700 font-semibold mt-0.5 flex items-center">
-              <span>Calendar Slots</span>
-              <ArrowUpRight className="w-3 h-3 ml-0.5" />
-            </p>
-          </div>
-        </div>
 
-        {/* 6. Total Patients Seen */}
-        <div 
-          onClick={() => navigate('/doctor/patients')}
-          className="cursor-pointer bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow hover:border-teal-300 transition flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between text-slate-500">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Patients</span>
-            <div className="p-2 bg-indigo-50 text-indigo-700 rounded-xl">
-              <Users className="w-4 h-4" />
+          {/* 5. Available Slots */}
+          <div 
+            onClick={() => navigate('/doctor/manage-slots')}
+            className="cursor-pointer bg-white border border-slate-200/90 hover:border-teal-400 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[118px]"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Open Slots</span>
+              <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{metrics.availableSlotsCount}</p>
+              <p className="text-[10px] text-teal-700 font-bold mt-1 flex items-center">
+                <span>Calendar Slots</span>
+                <ArrowUpRight className="w-3 h-3 ml-0.5" />
+              </p>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-2xl font-black text-slate-900">{metrics.totalPatientsSeen}</p>
-            <p className="text-[10px] text-indigo-700 font-semibold mt-0.5 flex items-center">
-              <span>Authorized Roster</span>
-              <ArrowUpRight className="w-3 h-3 ml-0.5" />
-            </p>
-          </div>
-        </div>
 
+          {/* 6. Total Patients Seen */}
+          <div 
+            onClick={() => navigate('/doctor/patients')}
+            className="cursor-pointer bg-white border border-slate-200/90 hover:border-indigo-400 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between min-h-[118px]"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Patients</span>
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center shrink-0">
+                <Users className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-2">
+              <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{metrics.totalPatientsSeen}</p>
+              <p className="text-[10px] text-indigo-700 font-bold mt-1 flex items-center">
+                <span>Care Vaults</span>
+                <ArrowUpRight className="w-3 h-3 ml-0.5" />
+              </p>
+            </div>
+          </div>
+
+        </div>
       </div>
 
       {/* Main Content Layout: Left Schedule/Triage + Right Schedule Summary & Analytics */}
@@ -369,99 +441,131 @@ export default function DoctorDashboard() {
               </div>
             ) : (
               <div className="space-y-3.5">
-                {currentList.map((apt) => (
-                  <div 
-                    key={apt.id} 
-                    className="border border-slate-100 bg-slate-50/60 hover:bg-slate-50 rounded-2xl p-4 transition space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-teal-100 text-teal-800 font-bold rounded-xl flex items-center justify-center text-sm shadow-sm">
-                          {apt.patientName.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-bold text-slate-900 text-sm">{apt.patientName}</span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              apt.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-800' :
-                              apt.status === 'PENDING' ? 'bg-amber-100 text-amber-800' :
-                              apt.status === 'COMPLETED' ? 'bg-sky-100 text-sky-800' :
-                              'bg-slate-200 text-slate-700'
-                            }`}>
-                              {apt.status}
-                            </span>
+                {currentList.map((apt) => {
+                  const isConfirmed = apt.status === 'CONFIRMED';
+                  const isPending = apt.status === 'PENDING';
+                  const isCompleted = apt.status === 'COMPLETED';
+
+                  return (
+                    <div 
+                      key={apt.id} 
+                      className={`border rounded-2xl p-4 sm:p-4.5 transition-all space-y-3 ${
+                        isConfirmed ? 'border-l-4 border-l-emerald-500 border-slate-200/80 bg-white hover:bg-emerald-50/15 shadow-sm' :
+                        isPending ? 'border-l-4 border-l-amber-500 border-amber-200/80 bg-amber-50/25 hover:bg-amber-50/40 shadow-sm' :
+                        isCompleted ? 'border-l-4 border-l-sky-500 border-slate-200/80 bg-slate-50/60 hover:bg-sky-50/20' :
+                        'border-slate-200 bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                        <div className="flex items-center space-x-3.5">
+                          {/* Distinct Colored Patient Avatar Based on Status */}
+                          <div className={`w-10 h-10 sm:w-11 sm:h-11 font-extrabold rounded-xl flex items-center justify-center text-sm shadow-sm shrink-0 ring-2 ${
+                            isConfirmed ? 'bg-emerald-100 text-emerald-800 ring-emerald-200/60' :
+                            isPending ? 'bg-amber-100 text-amber-900 ring-amber-200/70' :
+                            isCompleted ? 'bg-sky-100 text-sky-800 ring-sky-200/60' :
+                            'bg-slate-100 text-slate-700 ring-slate-200'
+                          }`}>
+                            {apt.patientName.replace(' (DEMO)', '').charAt(0)}
                           </div>
-                          <p className="text-xs text-slate-500 flex items-center space-x-2 mt-0.5">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            <span>{apt.date} at {apt.time} ({apt.specialty || 'General'})</span>
-                          </p>
+
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-bold text-slate-900 text-sm">{apt.patientName}</span>
+                              <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center space-x-1 border ${
+                                isConfirmed ? 'bg-emerald-100 text-emerald-800 border-emerald-300' :
+                                isPending ? 'bg-amber-100 text-amber-900 border-amber-300' :
+                                isCompleted ? 'bg-sky-100 text-sky-800 border-sky-300' :
+                                'bg-slate-200 text-slate-700 border-slate-300'
+                              }`}>
+                                {isConfirmed && <CheckCircle2 className="w-3 h-3 text-emerald-700" />}
+                                {isPending && <Clock className="w-3 h-3 text-amber-700" />}
+                                {isCompleted && <Sparkles className="w-3 h-3 text-sky-700" />}
+                                <span>{apt.status}</span>
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-500 flex items-center space-x-2 mt-0.5">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              <span className="font-medium text-slate-700">{apt.date} at {apt.time}</span>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-teal-700 font-semibold">{apt.specialty || 'General Consultation'}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Right: Actions */}
+                        <div className="flex items-center space-x-2 pt-2 sm:pt-0 w-full sm:w-auto justify-end">
+                          {isPending && (
+                            <>
+                              <button
+                                disabled={actionLoadingId === apt.id}
+                                onClick={() => handleQuickConfirm(apt.id)}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-sm transition disabled:opacity-50 flex items-center space-x-1"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Confirm</span>
+                              </button>
+                              <button
+                                disabled={actionLoadingId === apt.id}
+                                onClick={() => handleQuickReject(apt.id)}
+                                className="bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 px-3 py-1.5 rounded-xl font-bold text-xs transition disabled:opacity-50"
+                              >
+                                Decline
+                              </button>
+                            </>
+                          )}
+
+                          {isConfirmed && (
+                            <>
+                              <button
+                                disabled={actionLoadingId === apt.id}
+                                onClick={() => handleQuickComplete(apt.id)}
+                                className="bg-teal-600 hover:bg-teal-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-sm transition disabled:opacity-50 flex items-center space-x-1"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Mark Completed</span>
+                              </button>
+                              <button
+                                onClick={() => navigate(`/doctor/visit-summary?appointmentId=${apt.id}`)}
+                                className="bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 px-3 py-1.5 rounded-xl font-bold text-xs transition flex items-center space-x-1"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>Summary</span>
+                              </button>
+                            </>
+                          )}
+
+                          {apt.patientId && (
+                            <button
+                              onClick={() => navigate(`/doctor/patient-record/${apt.patientId}`)}
+                              className="text-slate-400 hover:text-teal-700 p-2 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-200"
+                              title="Open Patient Clinical Vault"
+                            >
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
 
-                      {/* Right: Actions */}
-                      <div className="flex items-center space-x-2 pt-2 sm:pt-0">
-                        {apt.status === 'PENDING' && (
-                          <>
-                            <button
-                              disabled={actionLoadingId === apt.id}
-                              onClick={() => handleQuickConfirm(apt.id)}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition disabled:opacity-50"
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              disabled={actionLoadingId === apt.id}
-                              onClick={() => handleQuickReject(apt.id)}
-                              className="bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-xl font-bold text-xs transition disabled:opacity-50"
-                            >
-                              Decline
-                            </button>
-                          </>
-                        )}
-
-                        {apt.status === 'CONFIRMED' && (
-                          <>
-                            <button
-                              disabled={actionLoadingId === apt.id}
-                              onClick={() => handleQuickComplete(apt.id)}
-                              className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition disabled:opacity-50"
-                            >
-                              Mark Completed
-                            </button>
-                            <button
-                              onClick={() => navigate(`/doctor/visit-summary?appointmentId=${apt.id}`)}
-                              className="bg-sky-50 hover:bg-sky-100 text-sky-800 px-3 py-1.5 rounded-xl font-bold text-xs transition flex items-center space-x-1"
-                            >
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>Summary</span>
-                            </button>
-                          </>
-                        )}
-
-                        {apt.patientId && (
-                          <button
-                            onClick={() => navigate(`/doctor/patient-record/${apt.patientId}`)}
-                            className="text-slate-400 hover:text-teal-700 p-1.5 rounded-xl hover:bg-slate-100 transition"
-                            title="Open Patient Clinical Vault"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        )}
+                      {/* Reported Reason / Symptoms */}
+                      <div className={`p-3 rounded-xl border text-xs leading-relaxed ${
+                        isPending ? 'bg-amber-100/40 border-amber-200 text-amber-950' :
+                        isConfirmed ? 'bg-slate-50 border-slate-200 text-slate-700' :
+                        'bg-white border-slate-100 text-slate-600'
+                      }`}>
+                        <span className="font-bold text-slate-800">Clinical Reason: </span>
+                        {apt.symptoms || apt.consultationReason}
                       </div>
                     </div>
-
-                    {/* Reported Reason / Symptoms */}
-                    <div className="bg-white p-2.5 rounded-xl border border-slate-100 text-xs text-slate-600">
-                      <span className="font-bold text-slate-700">Clinical Reason: </span>
-                      {apt.symptoms || apt.consultationReason}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
             <div className="pt-2 flex justify-between items-center text-xs">
-              <span className="text-slate-400 font-medium">Viewing real doctor appointments synced via Supabase RLS</span>
+              <span className="text-slate-400 font-medium">
+                {user?.isDemo ? 'Viewing simulated clinical triage records (DEMO DATA)' : 'Viewing real doctor appointments synced via Supabase RLS'}
+              </span>
               <Link 
                 to="/doctor/appointments" 
                 className="text-teal-700 hover:text-teal-900 font-bold flex items-center space-x-1"
@@ -483,7 +587,9 @@ export default function DoctorDashboard() {
                 <PieIcon className="w-4 h-4 text-teal-600" />
                 <span>Appointment Distribution</span>
               </h3>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Real-time</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                {user?.isDemo ? 'DEMO DATA' : 'Real-time'}
+              </span>
             </div>
 
             {metrics.statusDistribution.length > 0 && metrics.statusDistribution.some(s => s.count > 0) ? (
