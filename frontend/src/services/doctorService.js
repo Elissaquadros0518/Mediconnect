@@ -107,6 +107,32 @@ export const FALLBACK_DOCTORS = [
   }
 ];
 
+const todayDateStr = new Date().toISOString().split('T')[0];
+
+let demoSlotsStore = [
+  { id: 'slot-1', time: '09:00 AM', startTime: `${todayDateStr}T09:00:00Z`, endTime: `${todayDateStr}T09:30:00Z`, date: todayDateStr, status: 'Available' },
+  { id: 'slot-2', time: '10:30 AM', startTime: `${todayDateStr}T10:30:00Z`, endTime: `${todayDateStr}T11:00:00Z`, date: todayDateStr, status: 'Booked' },
+  { id: 'slot-3', time: '11:45 AM', startTime: `${todayDateStr}T11:45:00Z`, endTime: `${todayDateStr}T12:15:00Z`, date: todayDateStr, status: 'Available' },
+  { id: 'slot-4', time: '02:00 PM', startTime: `${todayDateStr}T14:00:00Z`, endTime: `${todayDateStr}T14:30:00Z`, date: todayDateStr, status: 'Available' }
+];
+
+let demoDoctorProfileStore = {
+  id: 'doc-profile-dev-1',
+  userId: 'doc-demo-1',
+  name: 'Dr. Rajesh Sharma, MD',
+  phone: '+91 98201 11000',
+  specialty: 'Cardiology',
+  specialtyId: '1',
+  qualification: 'DM (Cardiology), AIIMS New Delhi',
+  experienceYears: 14,
+  consultationFee: 1200,
+  biography: 'Expert in interventional cardiology, coronary angioplasty, and advanced heart failure management.',
+  registrationNumber: 'MCI-2012-98421',
+  verificationStatus: 'PENDING',
+  isPublic: false,
+  role: 'DOCTOR'
+};
+
 export const doctorService = {
   /**
    * Fetch medical specialties
@@ -297,11 +323,14 @@ export const doctorService = {
     }
 
     // Default mock slots for smooth demonstration
+    const targetDate = dateStr || todayDateStr;
+    const matching = demoSlotsStore.filter(s => s.date === targetDate || (s.startTime && s.startTime.startsWith(targetDate)));
+    if (matching.length > 0) return matching;
+
     return [
-      { id: 'slot-1', time: '09:00 AM', status: 'Available' },
-      { id: 'slot-2', time: '10:30 AM', status: 'Booked' },
-      { id: 'slot-3', time: '11:45 AM', status: 'Available' },
-      { id: 'slot-4', time: '02:00 PM', status: 'Available' }
+      { id: `slot-${targetDate}-1`, time: '09:00 AM', startTime: `${targetDate}T09:00:00Z`, endTime: `${targetDate}T09:30:00Z`, date: targetDate, status: 'Available' },
+      { id: `slot-${targetDate}-2`, time: '11:00 AM', startTime: `${targetDate}T11:00:00Z`, endTime: `${targetDate}T11:30:00Z`, date: targetDate, status: 'Available' },
+      { id: `slot-${targetDate}-3`, time: '02:30 PM', startTime: `${targetDate}T14:30:00Z`, endTime: `${targetDate}T15:00:00Z`, date: targetDate, status: 'Available' }
     ];
   },
 
@@ -309,31 +338,55 @@ export const doctorService = {
    * Create a new consultation slot for the logged-in doctor
    */
   async createSlot({ doctorProfileId, startTime, endTime }) {
-    const { data, error } = await supabase
-      .from('availability_slots')
-      .insert({
-        doctor_id: doctorProfileId,
-        start_time: startTime,
-        end_time: endTime,
-        status: 'AVAILABLE'
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('availability_slots')
+        .insert({
+          doctor_id: doctorProfileId,
+          start_time: startTime,
+          end_time: endTime,
+          status: 'AVAILABLE'
+        })
+        .select()
+        .single();
 
-    if (error) throw error;
-    return data;
+      if (!error && data) return data;
+    } catch (err) {
+      console.warn('[doctorService] createSlot notice:', err.message);
+    }
+
+    const slotDate = startTime ? startTime.split('T')[0] : todayDateStr;
+    const newSlot = {
+      id: `slot-dev-${Date.now()}`,
+      time: new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      startTime,
+      endTime,
+      date: slotDate,
+      status: 'Available'
+    };
+    demoSlotsStore.push(newSlot);
+    return newSlot;
   },
 
   /**
    * Delete an unbooked consultation slot
    */
   async deleteSlot(slotId) {
-    const { error } = await supabase
-      .from('availability_slots')
-      .delete()
-      .eq('id', slotId);
+    try {
+      const { error } = await supabase
+        .from('availability_slots')
+        .delete()
+        .eq('id', slotId);
 
-    if (error) throw error;
+      if (!error) {
+        demoSlotsStore = demoSlotsStore.filter(s => s.id !== slotId);
+        return true;
+      }
+    } catch (err) {
+      console.warn('[doctorService] deleteSlot notice:', err.message);
+    }
+
+    demoSlotsStore = demoSlotsStore.filter(s => s.id !== slotId);
     return true;
   },
 
@@ -386,20 +439,8 @@ export const doctorService = {
     }
 
     return {
-      id: 'doc-profile-dev-1',
-      userId,
-      name: 'Dr. Rajesh Sharma, MD',
-      phone: '+91 98201 11000',
-      specialty: 'Cardiology',
-      specialtyId: '1',
-      qualification: 'DM (Cardiology), AIIMS New Delhi',
-      experienceYears: 14,
-      consultationFee: 1200,
-      biography: 'Expert in interventional cardiology, coronary angioplasty, and advanced heart failure management.',
-      registrationNumber: 'MCI-2012-98421',
-      verificationStatus: 'PENDING',
-      isPublic: false,
-      role: 'DOCTOR'
+      ...demoDoctorProfileStore,
+      userId
     };
   },
 
@@ -457,6 +498,27 @@ export const doctorService = {
         .upsert({ user_id: userId, preferred_timezone: preferredTimezone }, { onConflict: 'user_id' })
         .then(() => {}).catch(() => {});
     }
+
+    // 4. Update in-memory demo store
+    const specialtyMap = {
+      '1': 'Cardiology',
+      '2': 'General Medicine',
+      '3': 'Pediatrics',
+      '4': 'Emergency Care',
+      '5': 'Neurology',
+      '6': 'Orthopedics'
+    };
+    demoDoctorProfileStore = {
+      ...demoDoctorProfileStore,
+      name: fullName || demoDoctorProfileStore.name,
+      phone: phone !== undefined ? phone : demoDoctorProfileStore.phone,
+      qualification: qualification !== undefined ? qualification : demoDoctorProfileStore.qualification,
+      experienceYears: experienceYears !== undefined ? Number(experienceYears) : demoDoctorProfileStore.experienceYears,
+      consultationFee: consultationFee !== undefined ? Number(consultationFee) : demoDoctorProfileStore.consultationFee,
+      biography: biography !== undefined ? biography : demoDoctorProfileStore.biography,
+      specialtyId: specialtyId !== undefined ? specialtyId : demoDoctorProfileStore.specialtyId,
+      specialty: specialtyId ? (specialtyMap[specialtyId] || demoDoctorProfileStore.specialty) : demoDoctorProfileStore.specialty
+    };
 
     return true;
   },

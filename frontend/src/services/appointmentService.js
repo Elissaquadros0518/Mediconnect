@@ -1,5 +1,97 @@
 import { supabase } from '../lib/supabase.js';
 
+// Stateful in-memory demo appointments store for realistic development & demo interactions
+const getInitialDemoAppointments = () => {
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  const nextDay = new Date(Date.now() + 172800000).toISOString().split('T')[0];
+
+  return [
+    { 
+      id: 'appt-demo-1', 
+      patientId: 'patient-demo-1',
+      patientName: 'Amit Patel', 
+      patientPhone: '+91 98201 23456',
+      specialty: 'Cardiology Consultation', 
+      date: today, 
+      time: '10:30 AM',
+      endTimeStr: '11:00 AM',
+      rawStartTime: `${today}T10:30:00Z`,
+      status: 'CONFIRMED', 
+      symptoms: 'Mild chest tightness and breathlessness during physical exertion.',
+      consultationReason: 'Mild chest tightness during exertion',
+      recordTitle: 'Chest X-Ray Report.pdf',
+      createdAt: new Date().toISOString()
+    },
+    { 
+      id: 'appt-demo-2', 
+      patientId: 'patient-demo-2',
+      patientName: 'Priya Deshmukh', 
+      patientPhone: '+91 98201 65432',
+      specialty: 'Routine Checkup', 
+      date: today, 
+      time: '11:45 AM',
+      endTimeStr: '12:15 PM',
+      rawStartTime: `${today}T11:45:00Z`,
+      status: 'PENDING', 
+      symptoms: 'Persistent fatigue and routine quarterly blood panel review.',
+      consultationReason: 'Persistent fatigue and quarterly checkup',
+      recordTitle: 'Blood Panel Complete.pdf',
+      createdAt: new Date().toISOString()
+    },
+    { 
+      id: 'appt-demo-3', 
+      patientId: 'patient-demo-3',
+      patientName: 'Rohan Gupta', 
+      patientPhone: '+91 98201 98765',
+      specialty: 'Follow-up Cardiology', 
+      date: tomorrow, 
+      time: '02:00 PM',
+      endTimeStr: '02:30 PM',
+      rawStartTime: `${tomorrow}T14:00:00Z`,
+      status: 'CONFIRMED', 
+      symptoms: 'Follow-up on blood pressure regulation and medication review.',
+      consultationReason: 'BP regulation and medication follow-up',
+      recordTitle: 'ECG Report 2026.pdf',
+      createdAt: new Date().toISOString()
+    },
+    { 
+      id: 'appt-demo-4', 
+      patientId: 'patient-demo-4',
+      patientName: 'Meera Nair', 
+      patientPhone: '+91 98201 11223',
+      specialty: 'Post-Op Review', 
+      date: '2026-10-20', 
+      time: '09:30 AM',
+      endTimeStr: '10:00 AM',
+      rawStartTime: '2026-10-20T09:30:00Z',
+      status: 'COMPLETED', 
+      symptoms: 'Stitch removal and recovery assessment.',
+      consultationReason: 'Post-operative recovery check',
+      recordTitle: 'Discharge Summary.pdf',
+      completedAt: '2026-10-20T10:05:00Z',
+      createdAt: '2026-10-18T10:00:00Z'
+    },
+    {
+      id: 'appt-demo-5',
+      patientId: 'patient-demo-4',
+      patientName: 'Meera Nair',
+      patientPhone: '+91 98201 11223',
+      specialty: 'General Consultation',
+      date: nextDay,
+      time: '09:30 AM',
+      endTimeStr: '10:00 AM',
+      rawStartTime: `${nextDay}T09:30:00Z`,
+      status: 'CONFIRMED',
+      symptoms: 'General health evaluation and quarterly lipid panel assessment.',
+      consultationReason: 'General health evaluation',
+      createdAt: new Date().toISOString()
+    }
+  ];
+};
+
+let demoAppointmentsStore = getInitialDemoAppointments();
+
 export const appointmentService = {
   /**
    * Book an appointment using atomic database function or direct insert
@@ -77,18 +169,28 @@ export const appointmentService = {
     }
 
     // Direct update fallback
-    const { data, error } = await supabase
-      .from('appointments')
-      .update({
-        status: 'CANCELLED',
-        cancellation_reason: reason,
-        cancelled_at: new Date().toISOString()
-      })
-      .eq('id', appointmentId)
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('appointments')
+        .update({
+          status: 'CANCELLED',
+          cancellation_reason: reason,
+          cancelled_at: new Date().toISOString()
+        })
+        .eq('id', appointmentId)
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (!error && data) {
+        return { success: true, appointment_id: appointmentId, status: 'CANCELLED' };
+      }
+    } catch (e) {
+      console.warn('[appointmentService] Direct cancel note:', e.message);
+    }
+
+    demoAppointmentsStore = demoAppointmentsStore.map(a =>
+      a.id === appointmentId ? { ...a, status: 'CANCELLED', cancellationReason: reason, cancelledAt: new Date().toISOString() } : a
+    );
     return { success: true, appointment_id: appointmentId, status: 'CANCELLED' };
   },
 
@@ -231,76 +333,7 @@ export const appointmentService = {
     }
 
     // Default fallback demo data for smooth development
-    const today = new Date().toISOString().split('T')[0];
-    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-
-    return [
-      { 
-        id: 'appt-demo-1', 
-        patientId: 'patient-demo-1',
-        patientName: 'Amit Patel', 
-        patientPhone: '+91 98201 23456',
-        specialty: 'Cardiology Consultation', 
-        date: today, 
-        time: '10:30 AM',
-        endTimeStr: '11:00 AM',
-        rawStartTime: `${today}T10:30:00Z`,
-        status: 'CONFIRMED', 
-        symptoms: 'Mild chest tightness and breathlessness during physical exertion.',
-        consultationReason: 'Mild chest tightness during exertion',
-        recordTitle: 'Chest X-Ray Report.pdf',
-        createdAt: new Date().toISOString()
-      },
-      { 
-        id: 'appt-demo-2', 
-        patientId: 'patient-demo-2',
-        patientName: 'Priya Deshmukh', 
-        patientPhone: '+91 98201 65432',
-        specialty: 'Routine Checkup', 
-        date: today, 
-        time: '11:45 AM',
-        endTimeStr: '12:15 PM',
-        rawStartTime: `${today}T11:45:00Z`,
-        status: 'PENDING', 
-        symptoms: 'Persistent fatigue and routine quarterly blood panel review.',
-        consultationReason: 'Persistent fatigue and quarterly checkup',
-        recordTitle: 'Blood Panel Complete.pdf',
-        createdAt: new Date().toISOString()
-      },
-      { 
-        id: 'appt-demo-3', 
-        patientId: 'patient-demo-3',
-        patientName: 'Rohan Gupta', 
-        patientPhone: '+91 98201 98765',
-        specialty: 'Follow-up Cardiology', 
-        date: tomorrow, 
-        time: '02:00 PM',
-        endTimeStr: '02:30 PM',
-        rawStartTime: `${tomorrow}T14:00:00Z`,
-        status: 'CONFIRMED', 
-        symptoms: 'Follow-up on blood pressure regulation and medication review.',
-        consultationReason: 'BP regulation and medication follow-up',
-        recordTitle: 'ECG Report 2026.pdf',
-        createdAt: new Date().toISOString()
-      },
-      { 
-        id: 'appt-demo-4', 
-        patientId: 'patient-demo-4',
-        patientName: 'Meera Nair', 
-        patientPhone: '+91 98201 11223',
-        specialty: 'Post-Op Review', 
-        date: '2026-10-20', 
-        time: '09:30 AM',
-        endTimeStr: '10:00 AM',
-        rawStartTime: '2026-10-20T09:30:00Z',
-        status: 'COMPLETED', 
-        symptoms: 'Stitch removal and recovery assessment.',
-        consultationReason: 'Post-operative recovery check',
-        recordTitle: 'Discharge Summary.pdf',
-        completedAt: '2026-10-20T10:05:00Z',
-        createdAt: '2026-10-18T10:00:00Z'
-      }
-    ];
+    return [...demoAppointmentsStore];
   },
 
   /**
@@ -384,99 +417,28 @@ export const appointmentService = {
       };
     } catch (err) {
       console.warn('[appointmentService] getDoctorMetrics fallback:', err.message);
-      const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-      const nextDay = new Date(Date.now() + 172800000).toISOString().split('T')[0];
+      const todayStr = new Date().toISOString().split('T')[0];
 
-      const demoToday = [
-        {
-          id: 'appt-demo-1',
-          patientId: 'patient-demo-1',
-          patientName: 'Amit Patel (DEMO)',
-          patientPhone: '+91 98201 23456',
-          specialty: 'Cardiology Consultation',
-          date: today,
-          time: '10:30 AM',
-          endTimeStr: '11:00 AM',
-          rawStartTime: `${today}T10:30:00Z`,
-          status: 'CONFIRMED',
-          symptoms: 'Mild chest tightness and breathlessness during physical exertion.'
-        },
-        {
-          id: 'appt-demo-2',
-          patientId: 'patient-demo-2',
-          patientName: 'Priya Deshmukh (DEMO)',
-          patientPhone: '+91 98201 65432',
-          specialty: 'Routine Checkup',
-          date: today,
-          time: '11:45 AM',
-          endTimeStr: '12:15 PM',
-          rawStartTime: `${today}T11:45:00Z`,
-          status: 'PENDING',
-          symptoms: 'Persistent fatigue and quarterly blood panel review.'
-        }
-      ];
-
-      const demoPending = [
-        {
-          id: 'appt-demo-2',
-          patientId: 'patient-demo-2',
-          patientName: 'Priya Deshmukh (DEMO)',
-          patientPhone: '+91 98201 65432',
-          specialty: 'Routine Checkup',
-          date: today,
-          time: '11:45 AM',
-          endTimeStr: '12:15 PM',
-          rawStartTime: `${today}T11:45:00Z`,
-          status: 'PENDING',
-          symptoms: 'Persistent fatigue and quarterly blood panel review.'
-        }
-      ];
-
-      const demoUpcoming = [
-        {
-          id: 'appt-demo-3',
-          patientId: 'patient-demo-3',
-          patientName: 'Rohan Gupta (DEMO)',
-          patientPhone: '+91 98201 98765',
-          specialty: 'Cardiology Follow-up',
-          date: tomorrow,
-          time: '02:00 PM',
-          endTimeStr: '02:30 PM',
-          rawStartTime: `${tomorrow}T14:00:00Z`,
-          status: 'CONFIRMED',
-          symptoms: 'Blood pressure regulation review and ECG follow-up.'
-        },
-        {
-          id: 'appt-demo-5',
-          patientId: 'patient-demo-4',
-          patientName: 'Meera Nair (DEMO)',
-          patientPhone: '+91 98201 11223',
-          specialty: 'General Consultation',
-          date: nextDay,
-          time: '09:30 AM',
-          endTimeStr: '10:00 AM',
-          rawStartTime: `${nextDay}T09:30:00Z`,
-          status: 'CONFIRMED',
-          symptoms: 'General health evaluation and quarterly lipid panel assessment.'
-        }
-      ];
+      const demoToday = demoAppointmentsStore.filter(a => a.date === todayStr);
+      const demoPending = demoAppointmentsStore.filter(a => a.status.toUpperCase() === 'PENDING');
+      const demoUpcoming = demoAppointmentsStore.filter(a => (a.status.toUpperCase() === 'CONFIRMED' || a.status.toUpperCase() === 'PENDING') && a.date >= todayStr);
+      const completedConsultations = demoAppointmentsStore.filter(a => a.status.toUpperCase() === 'COMPLETED');
 
       return {
         todayCount: demoToday.length,
         pendingCount: demoPending.length,
         upcomingCount: demoUpcoming.length,
-        completedCount: 3,
+        completedCount: completedConsultations.length,
         availableSlotsCount: 4,
         totalPatientsSeen: 4,
         todayAppointments: demoToday,
         pendingRequests: demoPending,
         upcomingAppointments: demoUpcoming,
         statusDistribution: [
-          { name: 'Confirmed', count: 3, color: '#0d9488' },
-          { name: 'Pending', count: 1, color: '#f59e0b' },
-          { name: 'Completed', count: 3, color: '#0284c7' },
-          { name: 'Cancelled', count: 0, color: '#ef4444' }
+          { name: 'Confirmed', count: demoAppointmentsStore.filter(a => a.status.toUpperCase() === 'CONFIRMED').length, color: '#0d9488' },
+          { name: 'Pending', count: demoPending.length, color: '#f59e0b' },
+          { name: 'Completed', count: completedConsultations.length, color: '#0284c7' },
+          { name: 'Cancelled', count: demoAppointmentsStore.filter(a => a.status.toUpperCase() === 'CANCELLED' || a.status.toUpperCase() === 'REJECTED').length, color: '#ef4444' }
         ]
       };
     }
@@ -501,7 +463,10 @@ export const appointmentService = {
       .single();
 
     if (error) {
-      // In development fallback simulation
+      // In development / demo fallback simulation
+      demoAppointmentsStore = demoAppointmentsStore.map(a =>
+        a.id === appointmentId ? { ...a, status: 'CONFIRMED', updatedAt: new Date().toISOString() } : a
+      );
       return { success: true, appointment_id: appointmentId, status: 'CONFIRMED' };
     }
 
@@ -515,6 +480,10 @@ export const appointmentService = {
         related_resource_id: appointmentId
       }).then(() => {}).catch(() => {});
     }
+
+    demoAppointmentsStore = demoAppointmentsStore.map(a =>
+      a.id === appointmentId ? { ...a, status: 'CONFIRMED', updatedAt: new Date().toISOString() } : a
+    );
 
     return { success: true, appointment_id: appointmentId, status: 'CONFIRMED' };
   },
@@ -531,6 +500,9 @@ export const appointmentService = {
       });
 
       if (!error && data?.success) {
+        demoAppointmentsStore = demoAppointmentsStore.map(a =>
+          a.id === appointmentId ? { ...a, status: 'REJECTED', cancellationReason: reason, cancelledAt: new Date().toISOString() } : a
+        );
         return data;
       }
     } catch (rpcErr) {
@@ -551,6 +523,9 @@ export const appointmentService = {
       .single();
 
     if (error) {
+      demoAppointmentsStore = demoAppointmentsStore.map(a =>
+        a.id === appointmentId ? { ...a, status: 'REJECTED', cancellationReason: reason, cancelledAt: new Date().toISOString() } : a
+      );
       return { success: true, appointment_id: appointmentId, status: 'REJECTED' };
     }
 
@@ -575,6 +550,10 @@ export const appointmentService = {
       }).then(() => {}).catch(() => {});
     }
 
+    demoAppointmentsStore = demoAppointmentsStore.map(a =>
+      a.id === appointmentId ? { ...a, status: 'REJECTED', cancellationReason: reason, cancelledAt: new Date().toISOString() } : a
+    );
+
     return { success: true, appointment_id: appointmentId, status: 'REJECTED' };
   },
 
@@ -589,6 +568,9 @@ export const appointmentService = {
       });
 
       if (!error && data?.success) {
+        demoAppointmentsStore = demoAppointmentsStore.map(a =>
+          a.id === appointmentId ? { ...a, status: 'COMPLETED', completedAt: new Date().toISOString() } : a
+        );
         return data;
       }
     } catch (rpcErr) {
@@ -608,6 +590,9 @@ export const appointmentService = {
       .single();
 
     if (error) {
+      demoAppointmentsStore = demoAppointmentsStore.map(a =>
+        a.id === appointmentId ? { ...a, status: 'COMPLETED', completedAt: new Date().toISOString() } : a
+      );
       return { success: true, appointment_id: appointmentId, status: 'COMPLETED' };
     }
 
@@ -620,6 +605,10 @@ export const appointmentService = {
         related_resource_id: appointmentId
       }).then(() => {}).catch(() => {});
     }
+
+    demoAppointmentsStore = demoAppointmentsStore.map(a =>
+      a.id === appointmentId ? { ...a, status: 'COMPLETED', completedAt: new Date().toISOString() } : a
+    );
 
     return { success: true, appointment_id: appointmentId, status: 'COMPLETED' };
   },

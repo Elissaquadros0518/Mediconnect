@@ -1,5 +1,19 @@
 import { supabase } from '../lib/supabase.js';
 
+let demoSummariesStore = [
+  {
+    id: 'sum-1',
+    appointmentId: 'appt-demo-4',
+    patientName: 'Meera Nair',
+    diagnosis: 'Post-operative recovery assessment',
+    summary: 'Wound healing on schedule. Stitches removed without complications.',
+    medications: 'Cefixime 200mg twice daily for 3 days',
+    followUpDate: '2026-11-15',
+    isPublished: true,
+    date: '2026-10-20'
+  }
+];
+
 export const visitSummaryService = {
   /**
    * Fetch clinical summary for a specific appointment
@@ -18,7 +32,9 @@ export const visitSummaryService = {
     } catch (err) {
       console.warn('[visitSummaryService] getAppointmentSummary fallback:', err.message);
     }
-    return null;
+
+    const found = demoSummariesStore.find(s => s.appointmentId === appointmentId);
+    return found || null;
   },
 
   /**
@@ -128,19 +144,8 @@ export const visitSummaryService = {
       console.warn('[visitSummaryService] getDoctorSummaries fallback:', err.message);
     }
 
-    return [
-      {
-        id: 'sum-1',
-        appointmentId: 'appt-demo-4',
-        patientName: 'Meera Nair',
-        diagnosis: 'Post-operative recovery assessment',
-        summary: 'Wound healing on schedule. Stitches removed without complications.',
-        medications: 'Cefixime 200mg twice daily for 3 days',
-        followUpDate: '2026-11-15',
-        isPublished: true,
-        date: '2026-10-20'
-      }
-    ];
+    // Default demo summaries for smooth demonstration
+    return [...demoSummariesStore];
   },
 
   /**
@@ -224,9 +229,45 @@ export const visitSummaryService = {
         }).then(() => {}).catch(() => {});
       }
 
+      // Keep in-memory store synchronized for demo
+      const demoEntry = {
+        id: data?.id || `sum-${Date.now()}`,
+        appointmentId,
+        patientName: resolvedPatientId === 'patient-demo-2' ? 'Priya Deshmukh' : resolvedPatientId === 'patient-demo-3' ? 'Rohan Gupta' : resolvedPatientId === 'patient-demo-4' ? 'Meera Nair' : 'Amit Patel',
+        diagnosis,
+        summary,
+        medications,
+        followUpDate: followUpDate || null,
+        isPublished,
+        date: new Date().toISOString().split('T')[0]
+      };
+      const existingIdx = demoSummariesStore.findIndex(s => s.appointmentId === appointmentId);
+      if (existingIdx >= 0) {
+        demoSummariesStore[existingIdx] = demoEntry;
+      } else {
+        demoSummariesStore.unshift(demoEntry);
+      }
+
       return data || payload;
     } catch (err) {
       console.warn('[visitSummaryService] Fallback saveSummary:', err.message);
+      const demoEntry = {
+        id: `sum-${Date.now()}`,
+        appointmentId,
+        patientName: resolvedPatientId === 'patient-demo-2' ? 'Priya Deshmukh' : resolvedPatientId === 'patient-demo-3' ? 'Rohan Gupta' : resolvedPatientId === 'patient-demo-4' ? 'Meera Nair' : 'Amit Patel',
+        diagnosis,
+        summary,
+        medications,
+        followUpDate: followUpDate || null,
+        isPublished,
+        date: new Date().toISOString().split('T')[0]
+      };
+      const existingIdx = demoSummariesStore.findIndex(s => s.appointmentId === appointmentId);
+      if (existingIdx >= 0) {
+        demoSummariesStore[existingIdx] = demoEntry;
+      } else {
+        demoSummariesStore.unshift(demoEntry);
+      }
       return payload;
     }
   }

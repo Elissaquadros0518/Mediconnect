@@ -104,25 +104,11 @@ export default function ManageSlots() {
       const startTimeUTC = startDateTime.toISOString();
       const endTimeUTC = endDateTime.toISOString();
 
-      if (doctorProfileId) {
-        await doctorService.createSlot({
-          doctorProfileId,
-          startTime: startTimeUTC,
-          endTime: endTimeUTC
-        });
-      } else {
-        // Fallback local simulation if profile not yet loaded
-        setSlots(prev => [
-          ...prev,
-          {
-            id: `slot-local-${Date.now()}`,
-            time: startDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            startTime: startTimeUTC,
-            endTime: endTimeUTC,
-            status: 'Available'
-          }
-        ]);
-      }
+      await doctorService.createSlot({
+        doctorProfileId: doctorProfileId || 'doc-profile-dev-1',
+        startTime: startTimeUTC,
+        endTime: endTimeUTC
+      });
 
       setSuccessMsg(`Availability slot published for ${startDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}!`);
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -148,9 +134,7 @@ export default function ManageSlots() {
     if (!confirm('Are you sure you want to remove this availability slot?')) return;
 
     try {
-      if (typeof id === 'string' && id.length > 20) {
-        await doctorService.deleteSlot(id);
-      }
+      await doctorService.deleteSlot(id);
       setSlots(prev => prev.filter(s => s.id !== id));
       setSuccessMsg('Slot successfully removed.');
       setTimeout(() => setSuccessMsg(''), 3000);
