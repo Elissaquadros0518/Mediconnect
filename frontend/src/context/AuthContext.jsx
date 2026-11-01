@@ -22,6 +22,42 @@ export const DEMO_DOCTOR_USER = {
   profileIncomplete: false
 };
 
+export const DEMO_PATIENT_USER = {
+  id: 'demo-patient-uuid-001',
+  email: 'patient@mediconnect.cloud',
+  name: 'Amit Patel',
+  role: 'patient',
+  accountStatus: 'ACTIVE',
+  phone: '+91 98201 23456',
+  isDemo: true,
+  profile: {
+    id: 'demo-patient-uuid-001',
+    full_name: 'Amit Patel',
+    role: 'PATIENT',
+    account_status: 'ACTIVE',
+    phone: '+91 98201 23456'
+  },
+  profileIncomplete: false
+};
+
+export const DEMO_ADMIN_USER = {
+  id: 'demo-admin-uuid-001',
+  email: 'admin@mediconnect.cloud',
+  name: 'System Administrator',
+  role: 'admin',
+  accountStatus: 'ACTIVE',
+  phone: '+91 98201 99999',
+  isDemo: true,
+  profile: {
+    id: 'demo-admin-uuid-001',
+    full_name: 'System Administrator',
+    role: 'ADMIN',
+    account_status: 'ACTIVE',
+    phone: '+91 98201 99999'
+  },
+  profileIncomplete: false
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [session, setSession] = useState(null);
@@ -137,10 +173,25 @@ export const AuthProvider = ({ children }) => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlDemo = urlParams.get('demo');
       const storedDemo = localStorage.getItem('mediconnect_demo_mode');
+      const currentPath = window.location.pathname;
 
-      if (urlDemo === 'doctor' || urlDemo === 'true' || storedDemo === 'doctor') {
-        localStorage.setItem('mediconnect_demo_mode', 'doctor');
-        setUser(DEMO_DOCTOR_USER);
+      if (urlDemo || storedDemo) {
+        let activeRole = 'doctor';
+        if (urlDemo === 'admin' || (!urlDemo && currentPath.startsWith('/admin'))) {
+          activeRole = 'admin';
+        } else if (urlDemo === 'patient' || (!urlDemo && currentPath.startsWith('/patient'))) {
+          activeRole = 'patient';
+        } else if (urlDemo === 'doctor' || (!urlDemo && currentPath.startsWith('/doctor'))) {
+          activeRole = 'doctor';
+        } else if (storedDemo === 'admin') {
+          activeRole = 'admin';
+        } else if (storedDemo === 'patient') {
+          activeRole = 'patient';
+        }
+
+        localStorage.setItem('mediconnect_demo_mode', activeRole);
+        const demoUser = activeRole === 'admin' ? DEMO_ADMIN_USER : activeRole === 'patient' ? DEMO_PATIENT_USER : DEMO_DOCTOR_USER;
+        setUser(demoUser);
         setLoading(false);
         return;
       }
@@ -199,13 +250,27 @@ export const AuthProvider = ({ children }) => {
     return res;
   };
 
-  const enterDemoDoctorMode = () => {
+  const switchDemoRole = (role) => {
     if (!import.meta.env.DEV) return;
+    const safeRole = role.toLowerCase();
     if (typeof window !== 'undefined') {
-      localStorage.setItem('mediconnect_demo_mode', 'doctor');
+      localStorage.setItem('mediconnect_demo_mode', safeRole);
     }
-    setUser(DEMO_DOCTOR_USER);
+    const demoUser = safeRole === 'admin' ? DEMO_ADMIN_USER : safeRole === 'patient' ? DEMO_PATIENT_USER : DEMO_DOCTOR_USER;
+    setUser(demoUser);
     setLoading(false);
+  };
+
+  const enterDemoDoctorMode = () => {
+    switchDemoRole('doctor');
+  };
+
+  const enterDemoPatientMode = () => {
+    switchDemoRole('patient');
+  };
+
+  const enterDemoAdminMode = () => {
+    switchDemoRole('admin');
   };
 
   const exitDemoMode = () => {
@@ -242,7 +307,10 @@ export const AuthProvider = ({ children }) => {
       register, 
       logout, 
       refreshProfile,
+      switchDemoRole,
       enterDemoDoctorMode,
+      enterDemoPatientMode,
+      enterDemoAdminMode,
       exitDemoMode,
       isDemoMode: Boolean(user?.isDemo)
     }}>

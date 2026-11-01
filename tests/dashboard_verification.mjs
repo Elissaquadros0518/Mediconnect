@@ -199,6 +199,7 @@ check('8. All route links in Sidebar and Dashboards are registered in App.jsx', 
     '/admin/appointments',
     '/admin/doctors',
     '/admin/users',
+    '/admin/inventory',
     '/admin/audit-logs'
   ];
 

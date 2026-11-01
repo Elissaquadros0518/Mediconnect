@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Calendar, FileText, Users, ShieldCheck, UserCheck, 
-  Clock, Activity, Settings, Bell, ClipboardList 
+  Clock, Activity, Settings, Bell, ClipboardList, Package 
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -102,6 +102,10 @@ export function Sidebar() {
             <Link to="/admin/users" className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${path === '/admin/users' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}>
               <Users className="w-4 h-4" />
               <span>User Management</span>
+            </Link>
+            <Link to="/admin/inventory" className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${path === '/admin/inventory' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}>
+              <Package className="w-4 h-4" />
+              <span>Inventory Management</span>
             </Link>
             <Link to="/admin/audit-logs" className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${path === '/admin/audit-logs' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}>
               <ShieldCheck className="w-4 h-4" />

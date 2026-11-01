@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { 
   Activity, LogOut, User, Menu, X, 
   LayoutDashboard, Calendar, Clock, Users, ClipboardList, 
-  Bell, Settings, FileText, UserCheck, ShieldCheck 
+  Bell, Settings, FileText, UserCheck, ShieldCheck, Package 
 } from 'lucide-react';
 
 export function Navbar() {
@@ -259,6 +259,14 @@ export function Navbar() {
                   >
                     <Users className="w-4 h-4" />
                     <span>User Management</span>
+                  </Link>
+                  <Link 
+                    to="/admin/inventory" 
+                    onClick={closeMenu}
+                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${path === '/admin/inventory' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    <Package className="w-4 h-4" />
+                    <span>Inventory Management</span>
                   </Link>
                   <Link 
                     to="/admin/audit-logs" 

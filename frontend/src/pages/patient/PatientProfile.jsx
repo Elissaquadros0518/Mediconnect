@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  User, Mail, Phone, MapPin, ShieldCheck, Save, ArrowLeft, CheckCircle2, HeartPulse, Building, Loader2, AlertCircle 
+  User, Mail, Phone, MapPin, ShieldCheck, Save, ArrowLeft, 
+  CheckCircle2, HeartPulse, Building, Loader2, AlertCircle,
+  Calendar, Printer, AlertTriangle, Stethoscope, Droplet, QrCode
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
@@ -11,20 +13,26 @@ export default function PatientProfile() {
   const { user, refreshProfile } = useAuth();
 
   const [profile, setProfile] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: 'Vidyavihar West, Mumbai, Maharashtra, 400077',
+    name: 'Amit Patel',
+    email: 'amit.patel@mediconnect.cloud',
+    phone: '+91 98201 23456',
+    address: '402, Sunset Towers, Vidyavihar West, Mumbai, Maharashtra 400077',
     bloodGroup: 'B+',
-    dob: '2004-10-18',
-    emergencyContact: 'Emergency Contact (+91 98201 65432)',
-    insuranceProvider: 'MediConnect Health Cover (Policy #MC-889234)',
-    allergies: 'Penicillin, Dust Mites'
+    dob: '1984-06-15',
+    gender: 'Male',
+    emergencyContactName: 'Sunita Patel',
+    emergencyContactPhone: '+91 98201 65432',
+    emergencyRelationship: 'Spouse',
+    insuranceProvider: 'Star Health Comprehensive Cover (Policy #SH-889234)',
+    allergies: 'Penicillin, Dust Mites, Shellfish',
+    chronicConditions: 'Mild Hypertension (Stage 1), Hyperlipidemia',
+    healthId: 'MC-PAT-40912'
   });
 
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showCardModal, setShowCardModal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -48,26 +56,35 @@ export default function PatientProfile() {
     setErrorMsg('');
 
     try {
-      if (user?.id) {
+      if (user?.id && !user.isDemo) {
         await authService.updateProfile(user.id, {
           full_name: profile.name,
           phone: profile.phone
         });
-        await refreshProfile();
+        if (refreshProfile) await refreshProfile();
       }
 
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      setTimeout(() => setSuccess(false), 4000);
     } catch (err) {
       console.error('Update profile error:', err);
-      setErrorMsg(err.message || 'Unable to update profile.');
+      setErrorMsg(err.message || 'Unable to update patient profile.');
     } finally {
       setSaving(false);
     }
   };
 
+  // Calculate Age
+  const calculateAge = (dobString) => {
+    if (!dobString) return '42';
+    const birthDate = new Date(dobString);
+    const difference = Date.now() - birthDate.getTime();
+    const ageDate = new Date(difference);
+    return Math.abs(ageDate.getUTCFullYear() - 1970);
+  };
+
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-6">
+    <div className="space-y-6 max-w-5xl mx-auto py-2">
       
       {/* Back Button */}
       <button 
@@ -75,147 +92,332 @@ export default function PatientProfile() {
         className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Back to Dashboard</span>
+        <span>Back to Patient Dashboard</span>
       </button>
 
-      {/* Top Banner */}
-      <div className="bg-gradient-to-r from-teal-700 to-sky-800 rounded-3xl p-6 md:p-8 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider inline-flex items-center space-x-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Encrypted Supabase Account</span>
-          </span>
-          <h1 className="text-2xl md:text-3xl font-extrabold mt-2">Patient Profile & Health ID</h1>
-          <p className="text-teal-100 text-sm mt-1">
-            Manage your personal contact info, emergency contacts, and vital medical insurance policies.
-          </p>
+      {/* Top Banner with Health ID Card */}
+      <div className="bg-gradient-to-r from-teal-800 via-teal-900 to-slate-900 rounded-3xl p-6 md:p-8 text-white shadow-lg border border-teal-700/30">
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="flex items-center space-x-4 sm:space-x-5">
+            {/* Patient Avatar */}
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-teal-400 to-sky-500 p-0.5 shadow-md flex items-center justify-center shrink-0">
+              <div className="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center text-teal-200 font-black text-2xl tracking-tight">
+                {profile.name.split(' ').map(n => n[0]).slice(0, 2).join('')}
+              </div>
+            </div>
+
+            {/* Profile Info */}
+            <div className="space-y-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-white/10 text-teal-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center space-x-1 backdrop-blur-sm border border-white/10">
+                  <ShieldCheck className="w-3.5 h-3.5 text-teal-300" />
+                  <span>Verified Health ID</span>
+                </span>
+                <span className="bg-amber-400 text-amber-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                  DEMO DATA
+                </span>
+                <span className="bg-emerald-400/20 text-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-400/30">
+                  Active Care Recipient
+                </span>
+              </div>
+
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight truncate">
+                {profile.name}
+              </h1>
+
+              <p className="text-teal-200/90 text-xs sm:text-sm">
+                Health ID: <span className="text-white font-mono font-bold">{profile.healthId}</span> • Blood Group: <span className="text-red-300 font-bold">{profile.bloodGroup}</span> • Age: <span className="text-white font-medium">{calculateAge(profile.dob)} Years</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2.5 shrink-0 w-full lg:w-auto pt-2 lg:pt-0">
+            <button
+              onClick={() => setShowCardModal(true)}
+              className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl border border-white/20 transition flex items-center space-x-1.5"
+            >
+              <Printer className="w-4 h-4 text-teal-300" />
+              <span>Digital Health Card</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Profile Form Card */}
+      {/* Success Notification */}
+      {success && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-2xl p-4 text-xs font-semibold flex items-center space-x-2.5 shadow-sm animate-in fade-in duration-200">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <span>Patient profile records and emergency contacts successfully saved!</span>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="bg-red-50 border border-red-200 text-red-900 rounded-2xl p-4 text-xs font-semibold flex items-center space-x-2.5 shadow-sm">
+          <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {/* Clinical Vitals Summary Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-1">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Blood Group</span>
+          <p className="text-xl font-black text-red-600 flex items-center space-x-1.5">
+            <Droplet className="w-4 h-4 fill-red-600" />
+            <span>{profile.bloodGroup}</span>
+          </p>
+          <p className="text-[10px] text-slate-400">Universal Compatible</p>
+        </div>
+
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-1">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Date of Birth</span>
+          <p className="text-lg font-black text-slate-900">{profile.dob}</p>
+          <p className="text-[10px] text-slate-500">{calculateAge(profile.dob)} Years ({profile.gender})</p>
+        </div>
+
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-1">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Caregiver Contact</span>
+          <p className="text-sm font-extrabold text-slate-900 truncate">{profile.emergencyContactName}</p>
+          <p className="text-[10px] text-teal-700 font-semibold">{profile.emergencyContactPhone}</p>
+        </div>
+
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs space-y-1">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Medical Insurance</span>
+          <p className="text-sm font-extrabold text-emerald-800 truncate">Star Health Policy</p>
+          <p className="text-[10px] text-slate-500">Active Hospitalization</p>
+        </div>
+      </div>
+
+      {/* Main Profile Form Card */}
       <div className="bg-white border border-slate-200 rounded-3xl p-6 md:p-8 shadow-sm">
         
-        {success && (
-          <div className="mb-6 bg-emerald-50 text-emerald-800 text-xs p-3.5 rounded-xl border border-emerald-200 flex items-center space-x-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>Profile successfully updated and synced with Supabase!</span>
-          </div>
-        )}
-
-        {errorMsg && (
-          <div className="mb-6 bg-red-50 text-red-700 text-xs p-3.5 rounded-xl border border-red-200 flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 text-red-600" />
-            <span>{errorMsg}</span>
-          </div>
-        )}
-
         <form onSubmit={handleUpdateProfile} className="space-y-6">
-          <div className="grid sm:grid-cols-2 gap-4">
+          
+          {/* Section 1: Personal & Identification Information */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+              <User className="w-4 h-4 text-teal-600" />
+              <h3 className="font-extrabold text-slate-900 text-sm md:text-base">Personal & Contact Identification</h3>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Full Legal Name *</label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input 
+                    type="text"
+                    name="name"
+                    value={profile.name}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Registered Email (Read-Only)</label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input 
+                    type="email"
+                    name="email"
+                    disabled
+                    value={profile.email}
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs md:text-sm bg-slate-100 text-slate-500 cursor-not-allowed font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Phone Number *</label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <input 
+                    type="tel"
+                    name="phone"
+                    value={profile.phone}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Blood Group *</label>
+                  <select
+                    name="bloodGroup"
+                    value={profile.bloodGroup}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white font-bold text-red-600"
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Gender *</label>
+                  <select
+                    name="gender"
+                    value={profile.gender}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                    <option value="Prefer not to say">Prefer not to say</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Full Legal Name</label>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Date of Birth</label>
+              <div className="relative sm:w-1/2">
+                <Calendar className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input 
+                  type="date"
+                  name="dob"
+                  value={profile.dob}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Residential Address</label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                 <input 
                   type="text"
-                  name="name"
-                  value={profile.name}
+                  name="address"
+                  value={profile.address}
                   onChange={handleChange}
-                  required
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm"
+                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
                 />
               </div>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Email Address</label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+          {/* Section 2: Emergency Contact & Caregiver */}
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+              <Phone className="w-4 h-4 text-sky-600" />
+              <h3 className="font-extrabold text-slate-900 text-sm md:text-base">Emergency Contacts & Caregiver</h3>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Emergency Contact Name</label>
                 <input 
-                  type="email"
-                  name="email"
-                  disabled
-                  value={profile.email}
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
+                  type="text"
+                  name="emergencyContactName"
+                  value={profile.emergencyContactName}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Contact Phone Number</label>
-              <div className="relative">
-                <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Relationship</label>
+                <input 
+                  type="text"
+                  name="emergencyRelationship"
+                  value={profile.emergencyRelationship}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Emergency Phone</label>
                 <input 
                   type="tel"
-                  name="phone"
-                  value={profile.phone}
+                  name="emergencyContactPhone"
+                  value={profile.emergencyContactPhone}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm"
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Clinical Flags, Allergies & Insurance */}
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center space-x-2 pb-2 border-b border-slate-100">
+              <HeartPulse className="w-4 h-4 text-red-600" />
+              <h3 className="font-extrabold text-slate-900 text-sm md:text-base">Medical History, Allergies & Insurance</h3>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Known Drug & Environmental Allergies</label>
+                <input 
+                  type="text"
+                  name="allergies"
+                  value={profile.allergies}
+                  onChange={handleChange}
+                  placeholder="e.g. Penicillin, Sulfa, Latex..."
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Chronic Medical Conditions</label>
+                <input 
+                  type="text"
+                  name="chronicConditions"
+                  value={profile.chronicConditions}
+                  onChange={handleChange}
+                  placeholder="e.g. Hypertension, Diabetes..."
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Emergency Contact</label>
-              <input 
-                type="text"
-                name="emergencyContact"
-                value={profile.emergencyContact}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Residential Address</label>
-            <div className="relative">
-              <MapPin className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-              <input 
-                type="text"
-                name="address"
-                value={profile.address}
-                onChange={handleChange}
-                className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Insurance Provider & Policy #</label>
+              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Health Insurance Policy & Provider</label>
               <input 
                 type="text"
                 name="insuranceProvider"
                 value={profile.insuranceProvider}
                 onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Known Allergies / Medical Flags</label>
-              <input 
-                type="text"
-                name="allergies"
-                value={profile.allergies}
-                onChange={handleChange}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm"
+                placeholder="Policy name, TPA, or insurance ID..."
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
               />
             </div>
           </div>
 
-          <div className="pt-2">
+          <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <span className="text-[11px] text-slate-400">
+              All clinical records are protected under PostgreSQL Row Level Security.
+            </span>
             <button
               type="submit"
               disabled={saving}
-              className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-bold px-8 py-3 rounded-xl shadow transition text-xs flex items-center justify-center space-x-2 disabled:opacity-50"
+              className="w-full sm:w-auto bg-teal-600 hover:bg-teal-700 text-white font-extrabold px-8 py-3 rounded-xl shadow-md transition text-xs flex items-center justify-center space-x-2 disabled:opacity-50"
             >
               {saving ? (
-                <span>Saving to Supabase...</span>
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving Updates...</span>
+                </>
               ) : (
                 <>
                   <Save className="w-4 h-4" />
-                  <span>Update Patient Records</span>
+                  <span>Update Patient Profile</span>
                 </>
               )}
             </button>
@@ -223,6 +425,78 @@ export default function PatientProfile() {
         </form>
 
       </div>
+
+      {/* Digital Health ID Card Modal */}
+      {showCardModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-200">
+              <span className="text-xs font-bold uppercase tracking-wider text-teal-700">Digital Health ID Card</span>
+              <button 
+                onClick={() => setShowCardModal(false)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Simulated Medical Health Card */}
+            <div className="bg-gradient-to-br from-teal-800 via-teal-900 to-slate-900 text-white rounded-2xl p-5 shadow-lg space-y-4 border border-teal-500/30 font-sans">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="font-black text-base tracking-tight">MediConnect <span className="text-teal-400">Health Card</span></h3>
+                  <p className="text-[10px] text-teal-200">National Healthcare Identification System</p>
+                </div>
+                <div className="p-2 bg-white/10 rounded-xl">
+                  <QrCode className="w-6 h-6 text-teal-300" />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] text-teal-300 uppercase font-bold tracking-wider">Health ID Number</p>
+                <p className="text-lg font-mono font-extrabold tracking-wider">{profile.healthId}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-white/10">
+                <div>
+                  <span className="text-[9px] text-teal-300 uppercase block">Patient Name</span>
+                  <span className="font-bold">{profile.name}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-teal-300 uppercase block">Blood Group</span>
+                  <span className="font-extrabold text-red-400">{profile.bloodGroup}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-teal-300 uppercase block">Date of Birth</span>
+                  <span>{profile.dob}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-teal-300 uppercase block">Emergency Helpline</span>
+                  <span>{profile.emergencyContactPhone}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 pt-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center space-x-1"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>Print Card</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCardModal(false)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-xl transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

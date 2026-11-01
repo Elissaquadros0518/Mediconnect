@@ -38,6 +38,7 @@ import AdminAppointments from './pages/admin/AdminAppointments';
 import AdminDoctors from './pages/admin/AdminDoctors';
 import AdminUsers from './pages/admin/AdminUsers';
 import AuditLogs from './pages/admin/AuditLogs';
+import AdminInventory from './pages/admin/AdminInventory';
 
 const Layout = ({ children }) => (
   <div className="min-h-screen flex flex-col bg-slate-50">
@@ -183,6 +184,13 @@ export default function App() {
           <ProtectedRoute>
             <RoleGuard allowedRoles={['admin']}>
               <Layout><AdminUsers /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/inventory" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['admin']}>
+              <Layout><AdminInventory /></Layout>
             </RoleGuard>
           </ProtectedRoute>
         } />
