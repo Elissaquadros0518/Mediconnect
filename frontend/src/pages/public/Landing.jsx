@@ -53,7 +53,6 @@ export default function Landing() {
             <button onClick={() => scrollToSection('about')} className="px-2 py-1 hover:text-teal-200 transition">About Us</button>
             <button onClick={() => scrollToSection('specialties')} className="px-2 py-1 hover:text-teal-200 transition">Specialties</button>
             <button onClick={() => scrollToSection('contact')} className="px-2 py-1 hover:text-teal-200 transition">Contact & Emergency</button>
-            <Link to="/doctors" className="px-2 py-1 hover:text-teal-200 transition">Find a Doctor</Link>
           </div>
 
           <div className="bg-sky-600 hover:bg-sky-800 p-2 rounded-full cursor-pointer transition">
@@ -133,7 +132,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* 5. SPECIALTIES & DEPARTMENTS SECTION (WITH YOUR DIRECT IMAGE URLS) */}
+      {/* 5. SPECIALTIES & DEPARTMENTS SECTION */}
       <section id="specialties" className="py-20 bg-white border-b border-slate-200 px-6 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">

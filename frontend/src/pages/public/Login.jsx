@@ -29,22 +29,6 @@ export default function Login() {
     }
   }, [searchParams, enterDemoDoctorMode, navigate]);
 
-  // Helper to pre-fill test credentials
-  const fillRole = (r) => {
-    setRole(r);
-    setErrorMsg('');
-    if (r === 'patient') {
-      setEmail('patient@mediconnect.cloud');
-      setPassword('Patient@123456');
-    } else if (r === 'doctor') {
-      setEmail('doctor@mediconnect.cloud');
-      setPassword('Doctor@123456');
-    } else if (r === 'admin') {
-      setEmail('admin@mediconnect.cloud');
-      setPassword('Admin@123456');
-    }
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
@@ -100,27 +84,6 @@ export default function Login() {
 
           <form className="space-y-6" onSubmit={handleLogin}>
             
-            {/* Role Quick Selector Tabs */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Quick Role Selection
-              </label>
-              <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1 rounded-xl">
-                {['patient', 'doctor', 'admin'].map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => fillRole(r)}
-                    className={`py-2 text-xs font-semibold rounded-lg capitalize transition ${
-                      role === r ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <div>
               <label className="block text-sm font-medium text-slate-700">Email Address</label>
               <div className="mt-1 relative rounded-md shadow-sm">
