@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Activity, Lock, Mail, AlertCircle, ArrowRight } from 'lucide-react';
+import { Activity, Lock, Mail, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function Login() {
   const [searchParams] = useSearchParams();
@@ -13,8 +13,21 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const { login } = useAuth();
+  const { login, enterDemoDoctorMode } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      const demoParam = searchParams.get('demo');
+      if (demoParam === 'doctor' || demoParam === 'true') {
+        enterDemoDoctorMode();
+        navigate('/doctor/dashboard', { replace: true });
+      } else if (!demoParam && typeof window !== 'undefined') {
+        // Clear any stale local preview session when navigating to sign in
+        localStorage.removeItem('mediconnect_demo_mode');
+      }
+    }
+  }, [searchParams, enterDemoDoctorMode, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,15 +37,16 @@ export default function Login() {
     try {
       const loggedInUser = await login({ email, password });
       
-      const targetRole = (loggedInUser?.role || role).toLowerCase();
-      if (targetRole === 'patient') {
-        navigate('/patient/dashboard', { replace: true });
-      } else if (targetRole === 'doctor') {
+      // Authoritative role resolution from PostgreSQL profile, NOT inferred from UI tab or URL
+      const targetRole = (loggedInUser?.role || '').toLowerCase();
+      if (targetRole === 'doctor') {
         navigate('/doctor/dashboard', { replace: true });
       } else if (targetRole === 'admin') {
         navigate('/admin/dashboard', { replace: true });
+      } else if (targetRole === 'patient') {
+        navigate('/patient/dashboard', { replace: true });
       } else {
-        navigate('/', { replace: true });
+        setErrorMsg('Your account profile is pending setup or role could not be verified in the database. Please contact hospital support.');
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -140,6 +154,34 @@ export default function Login() {
               </Link>
             </div>
           </div>
+
+          {import.meta.env.DEV && (
+            <div className="mt-6 pt-5 border-t border-slate-200">
+              <div className="bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-200/80 rounded-2xl p-4 text-center space-y-2.5">
+                <div className="flex items-center justify-center space-x-1.5 text-xs font-bold text-teal-900 uppercase tracking-wider">
+                  <Sparkles className="w-4 h-4 text-teal-600" />
+                  <span>Local Dev Demo Preview</span>
+                </div>
+                <p className="text-xs text-teal-700 leading-relaxed">
+                  Preview the complete Doctor Dashboard with simulated appointments, patient records, and schedule without live Supabase login.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    enterDemoDoctorMode();
+                    navigate('/doctor/dashboard', { replace: true });
+                  }}
+                  className="w-full py-2.5 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-sm transition flex items-center justify-center space-x-2"
+                >
+                  <span>Launch Doctor Dashboard Preview</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+                <p className="text-[10px] text-teal-600 font-medium">
+                  Tags all mock medical records as DEMO DATA
+                </p>
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

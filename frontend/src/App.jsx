@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/common/Navbar';
+import DemoModeBanner from './components/common/DemoModeBanner';
 import { Sidebar } from './components/common/Sidebar';
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import RoleGuard from './components/guards/RoleGuard';
@@ -27,6 +28,9 @@ import DoctorAppointments from './pages/doctor/DoctorAppointments';
 import PatientRecordView from './pages/doctor/PatientRecordView';
 import VisitSummaryEditor from './pages/doctor/VisitSummaryEditor';
 import ManageSlots from './pages/doctor/ManageSlots';
+import DoctorPatients from './pages/doctor/DoctorPatients';
+import DoctorNotifications from './pages/doctor/DoctorNotifications';
+import DoctorProfile from './pages/doctor/DoctorProfile';
 
 // Pages - Admin
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -34,9 +38,11 @@ import AdminAppointments from './pages/admin/AdminAppointments';
 import AdminDoctors from './pages/admin/AdminDoctors';
 import AdminUsers from './pages/admin/AdminUsers';
 import AuditLogs from './pages/admin/AuditLogs';
+import AdminInventory from './pages/admin/AdminInventory';
 
 const Layout = ({ children }) => (
   <div className="min-h-screen flex flex-col bg-slate-50">
+    <DemoModeBanner />
     <Navbar />
     <div className="flex flex-1">
       <Sidebar />
@@ -130,6 +136,27 @@ export default function App() {
             </RoleGuard>
           </ProtectedRoute>
         } />
+        <Route path="/doctor/patients" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><DoctorPatients /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/notifications" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><DoctorNotifications /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/doctor/profile" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['doctor', 'admin']}>
+              <Layout><DoctorProfile /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
 
         {/* Admin Portals & Management Views (Guarded) */}
         <Route path="/admin/dashboard" element={
@@ -157,6 +184,13 @@ export default function App() {
           <ProtectedRoute>
             <RoleGuard allowedRoles={['admin']}>
               <Layout><AdminUsers /></Layout>
+            </RoleGuard>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/inventory" element={
+          <ProtectedRoute>
+            <RoleGuard allowedRoles={['admin']}>
+              <Layout><AdminInventory /></Layout>
             </RoleGuard>
           </ProtectedRoute>
         } />
