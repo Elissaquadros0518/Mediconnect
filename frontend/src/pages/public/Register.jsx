@@ -2,26 +2,34 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
-  Activity, Mail, Lock, User, Stethoscope, ArrowRight, CheckCircle2, AlertCircle 
+  Activity, Mail, Lock, User, Stethoscope, ShieldAlert, ArrowRight, CheckCircle2, AlertCircle, Building2, Phone
 } from 'lucide-react';
 
 export default function Register() {
   const navigate = useNavigate();
   const { register } = useAuth();
 
-  // Role Tab State: 'patient' | 'doctor' (Admin cannot self-register)
+  // Role Tab State: 'patient' | 'doctor' | 'admin'
   const [role, setRole] = useState('patient');
 
-  // Form Field States
+  // Common Form Field States
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   
-  // Specific fields for Doctor registration
+  // Doctor Specific Fields
   const [specialty, setSpecialty] = useState('Cardiology');
   const [medicalLicense, setMedicalLicense] = useState('');
+
+  // Admin Specific Fields
+  const [adminId, setAdminId] = useState('');
+  const [adminDepartment, setAdminDepartment] = useState('Hospital Administration');
+
+  // Patient Specific Fields
+  const [dob, setDob] = useState('');
+  const [emergencyContact, setEmergencyContact] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -44,15 +52,27 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await register({
+      // Build role-specific metadata payload
+      const metadata = {
         email,
         password,
         fullName,
         phone,
         role: role.toUpperCase(),
-        specialty: role === 'doctor' ? specialty : null,
-        medicalLicense: role === 'doctor' ? medicalLicense : null
-      });
+      };
+
+      if (role === 'doctor') {
+        metadata.specialty = specialty;
+        metadata.medicalLicense = medicalLicense;
+      } else if (role === 'admin') {
+        metadata.adminId = adminId;
+        metadata.department = adminDepartment;
+      } else if (role === 'patient') {
+        metadata.dob = dob;
+        metadata.emergencyContact = emergencyContact;
+      }
+
+      await register(metadata);
 
       setSuccess(true);
       setTimeout(() => {
@@ -90,7 +110,7 @@ export default function Register() {
               <CheckCircle2 className="w-16 h-16 text-emerald-600 mx-auto animate-bounce" />
               <h3 className="text-xl font-extrabold text-slate-900">Account Created Successfully!</h3>
               <p className="text-sm text-slate-600">
-                Your <strong className="text-teal-700 capitalize">{role}</strong> account has been registered with Supabase. Redirecting to login...
+                Your <strong className="text-teal-700 capitalize">{role}</strong> account has been registered. Redirecting to login...
               </p>
             </div>
           ) : (
@@ -99,7 +119,7 @@ export default function Register() {
               <div>
                 <h3 className="text-lg font-bold text-slate-900 mb-1">Create an Account</h3>
                 <p className="text-xs text-slate-500 leading-relaxed">
-                  Join MediConnect Hospital's network to manage encrypted records and consultations.
+                  Register your official profile to access the MediConnect healthcare management platform.
                 </p>
               </div>
 
@@ -110,41 +130,60 @@ export default function Register() {
                 </div>
               )}
 
-              {/* Role Selection Tabs (Patient & Doctor only - Admin cannot self-register) */}
+              {/* Role Selection Tabs (Patient, Doctor, Admin) */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                   Select Account Role
                 </label>
-                <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-2xl">
+                <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1 rounded-2xl">
                   <button
                     type="button"
                     onClick={() => setRole('patient')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${
                       role === 'patient' 
                         ? 'bg-white text-teal-700 shadow-sm' 
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     <User className="w-3.5 h-3.5" />
-                    <span>Patient Account</span>
+                    <span>Patient</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setRole('doctor')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 ${
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${
                       role === 'doctor' 
                         ? 'bg-white text-teal-700 shadow-sm' 
                         : 'text-slate-600 hover:text-slate-900'
                     }`}
                   >
                     <Stethoscope className="w-3.5 h-3.5" />
-                    <span>Doctor Onboarding</span>
+                    <span>Doctor</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRole('admin')}
+                    className={`py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${
+                      role === 'admin' 
+                        ? 'bg-white text-teal-700 shadow-sm' 
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" />
+                    <span>Admin</span>
                   </button>
                 </div>
+
                 {role === 'doctor' && (
                   <p className="text-[11px] text-teal-700 mt-1.5 px-1 font-medium">
-                    * Doctor profiles undergo administrative verification before public listing.
+                    * Doctor profiles require valid medical council license verification before listing.
+                  </p>
+                )}
+                {role === 'admin' && (
+                  <p className="text-[11px] text-amber-700 mt-1.5 px-1 font-medium">
+                    * Administrator registrations are logged and vetted against hospital employee rosters.
                   </p>
                 )}
               </div>
@@ -194,15 +233,54 @@ export default function Register() {
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                     Phone Number
                   </label>
-                  <input 
-                    type="tel"
-                    placeholder="+91 98200 00000"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50/50"
-                  />
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <input 
+                      type="tel"
+                      required
+                      placeholder="+91 98200 00000"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50/50"
+                    />
+                  </div>
                 </div>
               </div>
+
+              {/* Conditional Fields for Patients */}
+              {role === 'patient' && (
+                <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Date of Birth
+                      </label>
+                      <input 
+                        type="date"
+                        required
+                        value={dob}
+                        onChange={(e) => setDob(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                        Emergency Contact No.
+                      </label>
+                      <input 
+                        type="tel"
+                        required
+                        placeholder="+91 98200 11111"
+                        value={emergencyContact}
+                        onChange={(e) => setEmergencyContact(e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Conditional Fields for Doctors */}
               {role === 'doctor' && (
@@ -237,6 +315,46 @@ export default function Register() {
                       onChange={(e) => setMedicalLicense(e.target.value)}
                       className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* Conditional Fields for Admins */}
+              {role === 'admin' && (
+                <div className="space-y-4 bg-amber-50/50 p-4 rounded-2xl border border-amber-200">
+                  <div>
+                    <label className="block text-xs font-bold text-amber-900 uppercase tracking-wider mb-1">
+                      Administrator Employee ID / Badge No.
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                      <input 
+                        type="text"
+                        required
+                        placeholder="e.g., ADM-HOSP-9042"
+                        value={adminId}
+                        onChange={(e) => setAdminId(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-amber-900 uppercase tracking-wider mb-1">
+                      Administrative Department
+                    </label>
+                    <select
+                      value={adminDepartment}
+                      onChange={(e) => setAdminDepartment(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                    >
+                      <option value="Hospital Administration">Hospital Administration</option>
+                      <option value="IT & Cloud Security">IT & Cloud Security</option>
+                      <option value="HR & Staff Compliance">HR & Staff Compliance</option>
+                      <option value="Billing & Finance">Billing & Finance</option>
+                    </select>
                   </div>
                 </div>
               )}
@@ -289,7 +407,7 @@ export default function Register() {
                 className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition text-sm flex items-center justify-center space-x-2 disabled:opacity-50"
               >
                 {loading ? (
-                  <span>Registering Account in Supabase...</span>
+                  <span>Registering Account...</span>
                 ) : (
                   <>
                     <span>Register Account</span>
