@@ -68,21 +68,47 @@ export const authService = {
 
     if (error) throw error;
 
-    // Fetch user profile to verify status
+    // Fetch user profile and doctor profile to verify status and authentic role
     if (data.user) {
-      const { data: profile, error: profileErr } = await supabase
+      const { data: profile } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
 
-      if (!profileErr && profile) {
-        if (profile.account_status === 'DISABLED') {
-          await supabase.auth.signOut();
-          throw new Error('Your account has been deactivated. Please contact support.');
-        }
-        return { session: data.session, user: { ...data.user, profile } };
+      if (profile && profile.account_status === 'DISABLED') {
+        await supabase.auth.signOut();
+        throw new Error('Your account has been deactivated. Please contact support.');
       }
+
+      // Check doctor_profiles table
+      let doctorProfile = null;
+      try {
+        const { data: docData } = await supabase
+          .from('doctor_profiles')
+          .select('id, qualification, experience_years, consultation_fee, biography, registration_number, verification_status, is_public, specialty_id')
+          .eq('user_id', data.user.id)
+          .maybeSingle();
+        if (docData) doctorProfile = docData;
+      } catch (docErr) {
+        console.warn('[authService] doctor_profiles lookup notice:', docErr.message);
+      }
+
+      const isAdmin = data.user.app_metadata?.role?.toUpperCase() === 'ADMIN' || profile?.role?.toUpperCase() === 'ADMIN';
+      const isDoctor = Boolean(doctorProfile) || profile?.role?.toUpperCase() === 'DOCTOR' || data.user.user_metadata?.role?.toUpperCase() === 'DOCTOR';
+      const resolvedRole = isAdmin ? 'ADMIN' : (isDoctor ? 'DOCTOR' : (profile?.role || (data.user.user_metadata?.role?.toUpperCase() === 'PATIENT' ? 'PATIENT' : null)));
+
+      const fullProfile = profile ? { ...profile, role: resolvedRole } : { id: data.user.id, role: resolvedRole };
+
+      return { 
+        session: data.session, 
+        user: { 
+          ...data.user, 
+          profile: fullProfile, 
+          role: resolvedRole ? resolvedRole.toLowerCase() : null, 
+          doctorProfile 
+        } 
+      };
     }
 
     return data;
@@ -128,27 +154,37 @@ export const authService = {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const { data: profile, error } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (error) {
-      console.warn('Error fetching profile:', error.message);
-      // Preserve role from user metadata if available; do NOT silently default doctors to patient
-      const metaRole = user.user_metadata?.role?.toUpperCase();
-      const resolvedRole = metaRole === 'DOCTOR' ? 'DOCTOR' : (user.app_metadata?.role === 'ADMIN' ? 'ADMIN' : (metaRole === 'PATIENT' ? 'PATIENT' : null));
-      return { 
-        id: user.id, 
-        email: user.email, 
-        role: resolvedRole, 
-        full_name: user.user_metadata?.full_name || user.email,
-        profileIncomplete: !profile
-      };
+    let doctorProfile = null;
+    try {
+      const { data: docData } = await supabase
+        .from('doctor_profiles')
+        .select('id, qualification, experience_years, consultation_fee, biography, registration_number, verification_status, is_public, specialty_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (docData) doctorProfile = docData;
+    } catch (docErr) {
+      console.warn('[authService] getCurrentProfile doctor_profiles notice:', docErr.message);
     }
 
-    return profile;
+    const isAdmin = user.app_metadata?.role?.toUpperCase() === 'ADMIN' || profile?.role?.toUpperCase() === 'ADMIN';
+    const isDoctor = Boolean(doctorProfile) || profile?.role?.toUpperCase() === 'DOCTOR' || user.user_metadata?.role?.toUpperCase() === 'DOCTOR';
+    const resolvedRole = isAdmin ? 'ADMIN' : (isDoctor ? 'DOCTOR' : (profile?.role || (user.user_metadata?.role?.toUpperCase() === 'PATIENT' ? 'PATIENT' : null)));
+
+    return { 
+      id: user.id, 
+      email: user.email, 
+      role: resolvedRole ? resolvedRole.toLowerCase() : null, 
+      full_name: profile?.full_name || user.user_metadata?.full_name || user.email,
+      profile: profile || null,
+      doctorProfile: doctorProfile || null,
+      profileIncomplete: (!profile && !doctorProfile) || !resolvedRole
+    };
   },
 
   /**

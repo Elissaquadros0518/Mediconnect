@@ -22,6 +22,9 @@ export default function Login() {
       if (demoParam === 'doctor' || demoParam === 'true') {
         enterDemoDoctorMode();
         navigate('/doctor/dashboard', { replace: true });
+      } else if (!demoParam && typeof window !== 'undefined') {
+        // Clear any stale local preview session when navigating to sign in
+        localStorage.removeItem('mediconnect_demo_mode');
       }
     }
   }, [searchParams, enterDemoDoctorMode, navigate]);

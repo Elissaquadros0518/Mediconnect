@@ -53,7 +53,7 @@ export const adminService = {
     }
 
     return [
-      { id: 1, name: 'elissa', email: 'quadroselissa1810@gmail.com', role: 'Patient', status: 'Active' },
+      { id: 1, name: 'Elissa Q.', email: 'elissa.q@example.com', role: 'Patient', status: 'Active' },
       { id: 2, name: 'Amit Patel', email: 'amit.patel@example.com', role: 'Patient', status: 'Active' },
       { id: 3, name: 'Priya Deshmukh', email: 'priya.d@example.com', role: 'Patient', status: 'Active' }
     ];

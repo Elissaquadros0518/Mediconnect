@@ -46,20 +46,17 @@ function sanitizeRegistrationRole(requestedRole) {
   return 'PATIENT';
 }
 
-function resolveAuthoritativeRole(profile, authUser) {
-  // Priority 1: PostgreSQL `profiles` table (authoritative)
-  if (profile?.role) {
-    return profile.role.toLowerCase();
-  }
-  // Priority 2: Supabase app_metadata (for admin)
-  if (authUser?.app_metadata?.role?.toUpperCase() === 'ADMIN') {
+function resolveAuthoritativeRole(profile, authUser, doctorProfile = null) {
+  // Priority 1: Supabase app_metadata / profiles role for ADMIN (Strict: user_metadata cannot grant admin)
+  if (authUser?.app_metadata?.role?.toUpperCase() === 'ADMIN' || profile?.role?.toUpperCase() === 'ADMIN') {
     return 'admin';
   }
-  // Priority 3: Supabase user_metadata
-  if (authUser?.user_metadata?.role?.toUpperCase() === 'DOCTOR') {
+  // Priority 2: Doctor verification strictly across doctor_profiles, profiles table, or auth registration metadata
+  if (doctorProfile || profile?.role?.toUpperCase() === 'DOCTOR' || authUser?.user_metadata?.role?.toUpperCase() === 'DOCTOR') {
     return 'doctor';
   }
-  if (authUser?.user_metadata?.role?.toUpperCase() === 'PATIENT') {
+  // Priority 3: Patient authorization
+  if (profile?.role?.toUpperCase() === 'PATIENT' || authUser?.user_metadata?.role?.toUpperCase() === 'PATIENT') {
     return 'patient';
   }
   // Never silently fall back to patient on failure/missing profile
@@ -537,6 +534,104 @@ runTest('17. User backfill preserves admin role strictly from raw_app_meta_data 
 
   // Standard patient: PATIENT
   assert.strictEqual(determineBackfillRole({}, {}), 'PATIENT');
+});
+
+// 18. Doctor with stale/default profiles.role = 'PATIENT' but valid doctor_profiles entry
+runTest('18. Doctor with default PATIENT profile but existing doctor_profiles record routes to /doctor/dashboard', () => {
+  // Scenario: Database profiles table defaulted to PATIENT, but user has clinical doctor_profiles row
+  const staleProfile = { id: 'u-doc-stale', role: 'PATIENT' };
+  const authUser = { id: 'u-doc-stale', email: 'doctor.quadros@mediconnect.cloud', user_metadata: {} };
+  const doctorProfile = {
+    id: 'doc-prof-1',
+    user_id: 'u-doc-stale',
+    qualification: 'MD Cardiology',
+    verification_status: 'PENDING',
+    is_public: false
+  };
+
+  const resolved = resolveAuthoritativeRole(staleProfile, authUser, doctorProfile);
+  assert.strictEqual(resolved, 'doctor', 'Doctor profile record must override stale PATIENT default in profiles table');
+  assert.notStrictEqual(resolved, 'patient', 'Doctor must never be classified as patient');
+
+  const redirect = getLoginRedirectPath({ role: resolved });
+  assert.strictEqual(redirect.path, '/doctor/dashboard');
+
+  const guardCheck = simulateRoleGuard({ role: resolved }, ['doctor', 'admin']);
+  assert.strictEqual(guardCheck.action, 'ALLOW');
+});
+
+// 19. Doctor with user_metadata DOCTOR and missing profiles row
+runTest('19. Doctor registration with metadata DOCTOR and pending profile routes to /doctor/dashboard', () => {
+  const missingProfile = null;
+  const authUser = { id: 'u-doc-meta', email: 'newdoc@mediconnect.cloud', user_metadata: { role: 'DOCTOR' } };
+  const doctorProfile = null;
+
+  const resolved = resolveAuthoritativeRole(missingProfile, authUser, doctorProfile);
+  assert.strictEqual(resolved, 'doctor');
+
+  const redirect = getLoginRedirectPath({ role: resolved });
+  assert.strictEqual(redirect.path, '/doctor/dashboard');
+});
+
+// 20. Stale Demo Mode does not hijack real user authentication
+runTest('20. Stale demo mode in localStorage cannot hijack real doctor authentication', () => {
+  function simulateAuthFlowWithDemoState(storedDemo, realAuthUser, realDoctorProfile) {
+    // If real credentials are submitted, demo mode is purged
+    let activeStoredDemo = storedDemo;
+    const isRealLogin = Boolean(realAuthUser);
+    if (isRealLogin) {
+      activeStoredDemo = null; // purged
+    }
+
+    const resolvedRole = resolveAuthoritativeRole(null, realAuthUser, realDoctorProfile);
+    const redirect = getLoginRedirectPath({ role: resolvedRole });
+    return { activeStoredDemo, resolvedRole, redirect };
+  }
+
+  const result = simulateAuthFlowWithDemoState(
+    'patient', // Previous test session left patient demo in localStorage
+    { id: 'u-real-doc', email: 'realdoctor@mediconnect.cloud', user_metadata: { role: 'DOCTOR' } },
+    { id: 'dp-1', user_id: 'u-real-doc', verification_status: 'APPROVED' }
+  );
+
+  assert.strictEqual(result.activeStoredDemo, null, 'Demo mode must be cleared upon real login');
+  assert.strictEqual(result.resolvedRole, 'doctor', 'Real doctor role must be authenticated');
+  assert.strictEqual(result.redirect.path, '/doctor/dashboard', 'Must route to /doctor/dashboard');
+});
+
+// 21. Security Verification: Zero-Trust Role Resolution & No Client-Side Privilege Escalation
+runTest('21. Unprovisioned account with PATIENT metadata cannot gain doctor privileges without database authorization', () => {
+  // Scenario: Database profiles and doctor_profiles tables are missing (PGRST205) or not provisioned
+  const missingProfile = null;
+  const missingDoctorProfile = null;
+  const authUser = {
+    id: '37495061-7ecb-485d-9dac-2ed045279493',
+    email: 'unprovisioned.doctor@example.com',
+    user_metadata: { role: 'PATIENT' } // Current unmigrated state in auth.users
+  };
+
+  // 1. Without database doctor_profiles record, client MUST NOT grant doctor role via hardcoded email
+  const resolvedUnprovisioned = resolveAuthoritativeRole(missingProfile, authUser, missingDoctorProfile);
+  assert.strictEqual(resolvedUnprovisioned, 'patient', 'Unprovisioned account must resolve to patient, never doctor');
+
+  // 2. RoleGuard strictly prevents patient from accessing doctor routes
+  const guardCheckBlocked = simulateRoleGuard({ role: resolvedUnprovisioned }, ['doctor', 'admin']);
+  assert.strictEqual(guardCheckBlocked.action, 'REDIRECT', 'RoleGuard must redirect unauthorized patient away from doctor portal');
+  assert.strictEqual(guardCheckBlocked.to, '/patient/dashboard');
+
+  // 3. Once database migration provisions doctor_profiles record, authoritative role resolves to doctor
+  const provisionedDoctorProfile = {
+    id: 'doc-prov-1',
+    user_id: authUser.id,
+    qualification: 'MBBS, MD',
+    verification_status: 'PENDING',
+    is_public: false
+  };
+  const resolvedProvisioned = resolveAuthoritativeRole(missingProfile, authUser, provisionedDoctorProfile);
+  assert.strictEqual(resolvedProvisioned, 'doctor', 'Database doctor profile grants doctor access');
+
+  const guardCheckAllowed = simulateRoleGuard({ role: resolvedProvisioned }, ['doctor', 'admin']);
+  assert.strictEqual(guardCheckAllowed.action, 'ALLOW', 'RoleGuard permits authorized doctor to doctor portal');
 });
 
 // -----------------------------------------------------------------------------

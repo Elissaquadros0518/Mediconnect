@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Helper to load profile from PostgreSQL
+  // Helper to load profile from PostgreSQL with comprehensive doctor verification
   const fetchUserProfile = async (authUser) => {
     if (!authUser) {
       setUser(null);
@@ -71,6 +71,7 @@ export const AuthProvider = ({ children }) => {
     }
 
     try {
+      // 1. Primary profile query from public.profiles
       let { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
@@ -81,45 +82,84 @@ export const AuthProvider = ({ children }) => {
         console.warn('[AuthContext] Could not load profile:', error.message);
       }
 
-      // If no profile exists yet in the database, attempt self-healing from auth metadata
-      const metaRole = authUser.user_metadata?.role?.toUpperCase();
-      const safeMetaRole = metaRole === 'DOCTOR' ? 'DOCTOR' : (authUser.app_metadata?.role?.toUpperCase() === 'ADMIN' ? 'ADMIN' : 'PATIENT');
+      // 2. Authoritative doctor check in public.doctor_profiles
+      let doctorProfile = null;
+      try {
+        const { data: docData, error: docErr } = await supabase
+          .from('doctor_profiles')
+          .select('id, qualification, experience_years, consultation_fee, biography, registration_number, verification_status, is_public, specialty_id')
+          .eq('user_id', authUser.id)
+          .maybeSingle();
 
-      if (!profile && authUser.id) {
-        try {
-          const { data: createdProfile } = await supabase
-            .from('profiles')
-            .upsert({
-              id: authUser.id,
-              full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
-              phone: authUser.user_metadata?.phone || null,
-              role: safeMetaRole,
-              account_status: 'ACTIVE'
-            }, { onConflict: 'id' })
-            .select()
-            .maybeSingle();
-
-          if (createdProfile) {
-            profile = createdProfile;
-          }
-        } catch (healErr) {
-          console.warn('[AuthContext] Profile self-heal notice:', healErr.message);
+        if (!docErr && docData) {
+          doctorProfile = docData;
         }
+      } catch (docLookupErr) {
+        console.warn('[AuthContext] doctor_profiles lookup warning:', docLookupErr.message);
       }
 
-      // Determine authoritative role:
-      // Priority 1: PostgreSQL `profiles` table (authoritative)
-      // Priority 2: Supabase Auth metadata (if profiles table was unreachable during registration)
-      // Requirement: NEVER silently convert doctor or admin to patient when lookup fails
+      // 3. Multi-table Authoritative Role Resolution:
+      // Priority 1 (Admin): Strictly requires app_metadata.role === 'ADMIN' or profiles.role === 'ADMIN' (never user_metadata)
+      // Priority 2 (Doctor): Verified strictly by doctor_profiles record, profiles.role === 'DOCTOR', or registration metadata
+      // Priority 3 (Patient): profiles.role === 'PATIENT' or user_metadata.role === 'PATIENT' (and neither doctor nor admin)
+      // Requirement: No hardcoded email overrides, no fake APPROVED statuses, never silently demote doctors to patient
+      const isAdmin = authUser.app_metadata?.role?.toUpperCase() === 'ADMIN' || profile?.role?.toUpperCase() === 'ADMIN';
+      const isDoctor = Boolean(doctorProfile) || 
+                       profile?.role?.toUpperCase() === 'DOCTOR' || 
+                       authUser.user_metadata?.role?.toUpperCase() === 'DOCTOR';
+      const isPatient = (profile?.role?.toUpperCase() === 'PATIENT' || authUser.user_metadata?.role?.toUpperCase() === 'PATIENT') && !isDoctor && !isAdmin;
+
       let resolvedRole = null;
-      if (profile?.role) {
-        resolvedRole = profile.role.toLowerCase();
-      } else if (authUser.app_metadata?.role?.toUpperCase() === 'ADMIN') {
+      if (isAdmin) {
         resolvedRole = 'admin';
-      } else if (authUser.user_metadata?.role?.toUpperCase() === 'DOCTOR') {
+      } else if (isDoctor) {
         resolvedRole = 'doctor';
-      } else if (authUser.user_metadata?.role?.toUpperCase() === 'PATIENT') {
+      } else if (isPatient) {
         resolvedRole = 'patient';
+      }
+
+      // 4. Safe self-healing of profile row in PostgreSQL
+      if (authUser.id) {
+        const targetDbRole = resolvedRole ? resolvedRole.toUpperCase() : null;
+
+        // If no profile row exists, initialize with verified role
+        if (!profile && targetDbRole) {
+          try {
+            const { data: createdProfile } = await supabase
+              .from('profiles')
+              .upsert({
+                id: authUser.id,
+                full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0],
+                phone: authUser.user_metadata?.phone || null,
+                role: targetDbRole,
+                account_status: 'ACTIVE'
+              }, { onConflict: 'id' })
+              .select()
+              .maybeSingle();
+
+            if (createdProfile) {
+              profile = createdProfile;
+            }
+          } catch (healErr) {
+            console.warn('[AuthContext] Profile self-heal notice:', healErr.message);
+          }
+        } else if (profile && isDoctor && profile.role === 'PATIENT') {
+          // If profile was erroneously created as PATIENT before doctor trigger ran, sync to DOCTOR
+          try {
+            const { data: syncedProfile } = await supabase
+              .from('profiles')
+              .update({ role: 'DOCTOR' })
+              .eq('id', authUser.id)
+              .select()
+              .maybeSingle();
+
+            if (syncedProfile) {
+              profile = syncedProfile;
+            }
+          } catch (syncErr) {
+            console.warn('[AuthContext] Role synchronization notice:', syncErr.message);
+          }
+        }
       }
 
       const name = profile?.full_name || authUser.user_metadata?.full_name || authUser.email?.split('@')[0];
@@ -133,7 +173,8 @@ export const AuthProvider = ({ children }) => {
         avatarPath: profile?.avatar_path,
         phone: profile?.phone,
         profile: profile || null,
-        profileIncomplete: !profile || !resolvedRole
+        doctorProfile: doctorProfile || null,
+        profileIncomplete: (!profile && !doctorProfile) || !resolvedRole
       };
 
       setUser(fullUser);
@@ -168,26 +209,23 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let mounted = true;
 
-    // Local Development Demo Preview Check
+    // Check for explicit local development demo query parameter (?demo=doctor|patient|admin)
     if (import.meta.env.DEV && typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const urlDemo = urlParams.get('demo');
-      const storedDemo = localStorage.getItem('mediconnect_demo_mode');
       const currentPath = window.location.pathname;
 
-      if (urlDemo || storedDemo) {
+      // Navigating to public authentication screens without demo query param resets any lingering demo mode
+      if (!urlDemo && (currentPath === '/login' || currentPath === '/register' || currentPath === '/forgot-password')) {
+        localStorage.removeItem('mediconnect_demo_mode');
+      }
+
+      // Explicit URL demo param always activates preview mode immediately
+      if (urlDemo) {
         let activeRole = 'doctor';
-        if (urlDemo === 'admin' || (!urlDemo && currentPath.startsWith('/admin'))) {
-          activeRole = 'admin';
-        } else if (urlDemo === 'patient' || (!urlDemo && currentPath.startsWith('/patient'))) {
-          activeRole = 'patient';
-        } else if (urlDemo === 'doctor' || (!urlDemo && currentPath.startsWith('/doctor'))) {
-          activeRole = 'doctor';
-        } else if (storedDemo === 'admin') {
-          activeRole = 'admin';
-        } else if (storedDemo === 'patient') {
-          activeRole = 'patient';
-        }
+        if (urlDemo === 'admin') activeRole = 'admin';
+        else if (urlDemo === 'patient') activeRole = 'patient';
+        else if (urlDemo === 'doctor' || urlDemo === 'true') activeRole = 'doctor';
 
         localStorage.setItem('mediconnect_demo_mode', activeRole);
         const demoUser = activeRole === 'admin' ? DEMO_ADMIN_USER : activeRole === 'patient' ? DEMO_PATIENT_USER : DEMO_DOCTOR_USER;
@@ -197,15 +235,34 @@ export const AuthProvider = ({ children }) => {
       }
     }
 
-    // 1. Initial Session Check
+    // 1. Initial Session Check with Supabase
     supabase.auth.getSession().then(({ data: { session: initialSession } }) => {
       if (!mounted) return;
       setSession(initialSession);
+
       if (initialSession?.user) {
+        // Authenticated user exists - clear demo mode and load authoritative profile
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('mediconnect_demo_mode');
+        }
         fetchUserProfile(initialSession.user).finally(() => {
           if (mounted) setLoading(false);
         });
       } else {
+        // No active Supabase session: check if dev demo mode was persisted on portal routes
+        if (import.meta.env.DEV && typeof window !== 'undefined') {
+          const storedDemo = localStorage.getItem('mediconnect_demo_mode');
+          const currentPath = window.location.pathname;
+          const isPortalRoute = currentPath.startsWith('/doctor') || currentPath.startsWith('/patient') || currentPath.startsWith('/admin');
+
+          if (storedDemo && isPortalRoute) {
+            let activeRole = storedDemo === 'admin' ? 'admin' : storedDemo === 'patient' ? 'patient' : 'doctor';
+            const demoUser = activeRole === 'admin' ? DEMO_ADMIN_USER : activeRole === 'patient' ? DEMO_PATIENT_USER : DEMO_DOCTOR_USER;
+            setUser(demoUser);
+            setLoading(false);
+            return;
+          }
+        }
         setUser(null);
         setLoading(false);
       }
@@ -221,6 +278,9 @@ export const AuthProvider = ({ children }) => {
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         if (newSession?.user) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('mediconnect_demo_mode');
+          }
           await fetchUserProfile(newSession.user);
         }
       } else if (event === 'SIGNED_OUT') {
@@ -237,6 +297,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async ({ email, password }) => {
+    // Clear demo mode when performing real user login
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('mediconnect_demo_mode');
+    }
     const res = await authService.signIn({ email, password });
     if (res?.user) {
       const fullUser = await fetchUserProfile(res.user);
