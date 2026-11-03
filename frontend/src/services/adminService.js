@@ -35,37 +35,34 @@ export const adminService = {
   async getAllUsers() {
     const { data, error } = await supabase
       .from('profiles')
-      .select(`
-        id,
-        full_name,
-        role,
-        account_status,
-        created_at,
-        patient_profiles (
-          date_of_birth,
-          gender,
-          blood_group,
-          emergency_contact_phone
-        )
-      `)
+      .select('id, full_name, phone, role, account_status, created_at')
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('[adminService] Error fetching all users:', error);
-      throw error;
-    }
+    if (error) throw error;
 
-    if (!data || data.length === 0) {
-      return [];
-    }
-
-    return data.map(u => ({
+    return (data || []).map(u => ({
       id: u.id,
-      name: u.full_name || 'System User',
-      email: `${(u.full_name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '.')}@mediconnect.cloud`,
-      role: u.role ? (u.role.charAt(0) + u.role.slice(1).toLowerCase()) : 'Patient',
-      status: u.account_status === 'DISABLED' ? 'Disabled' : 'Active'
+      name: u.full_name,
+      phone: u.phone,
+      role: u.role,                 // 'PATIENT' | 'DOCTOR' | 'ADMIN'
+      status: u.account_status,     // 'ACTIVE' | 'DISABLED' | 'PENDING'
+      createdAt: u.created_at
     }));
+  },
+
+  /**
+   * Enable / disable a user account
+   */
+  async updateUserStatus(userId, status) {
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({ account_status: status, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   /**
@@ -92,20 +89,24 @@ export const adminService = {
       throw error;
     }
 
-    // If assigned to DOCTOR, guarantee doctor_profiles record exists
+    // If assigned to DOCTOR, make sure a doctor_profiles record exists.
+    // ignoreDuplicates => never overwrite an existing doctor's real details.
     if (safeRole === 'DOCTOR') {
-      try {
-        await supabase
-          .from('doctor_profiles')
-          .upsert({
+      const { error: docErr } = await supabase
+        .from('doctor_profiles')
+        .upsert(
+          {
             user_id: userId,
             qualification: 'Specialist Physician',
             registration_number: `MED-REG-${String(userId).slice(0, 8).toUpperCase()}`,
             verification_status: 'APPROVED',
             is_public: true
-          }, { onConflict: 'user_id' });
-      } catch (docErr) {
-        console.warn('[adminService] doctor_profiles sync notice:', docErr.message);
+          },
+          { onConflict: 'user_id', ignoreDuplicates: true }
+        );
+
+      if (docErr) {
+        console.warn('[adminService] doctor_profiles sync:', docErr.message);
       }
     }
 
