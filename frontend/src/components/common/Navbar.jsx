@@ -114,7 +114,7 @@ export function Navbar() {
                 </button>
               </div>
 
-              {/* Doctor Navigation Links */}
+              {/* Doctor Navigation Links (Appointments merged into Patient Directory) */}
               {user.role === 'doctor' && (
                 <nav className="space-y-1">
                   <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Physician Navigation</p>
@@ -125,14 +125,6 @@ export function Navbar() {
                   >
                     <LayoutDashboard className="w-4 h-4" />
                     <span>Dashboard</span>
-                  </Link>
-                  <Link 
-                    to="/doctor/appointments" 
-                    onClick={closeMenu}
-                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${path === '/doctor/appointments' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}
-                  >
-                    <Calendar className="w-4 h-4" />
-                    <span>Appointments</span>
                   </Link>
                   <Link 
                     to="/doctor/manage-slots" 

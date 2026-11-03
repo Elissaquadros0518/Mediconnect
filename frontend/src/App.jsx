@@ -2,7 +2,6 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/common/Navbar';
-import DemoModeBanner from './components/common/DemoModeBanner';
 import { Sidebar } from './components/common/Sidebar';
 import ProtectedRoute from './components/guards/ProtectedRoute';
 import RoleGuard from './components/guards/RoleGuard';
@@ -24,7 +23,6 @@ import PatientProfile from './pages/patient/PatientProfile';
 
 // Pages - Doctor
 import DoctorDashboard from './pages/doctor/DoctorDashboard';
-import DoctorAppointments from './pages/doctor/DoctorAppointments';
 import PatientRecordView from './pages/doctor/PatientRecordView';
 import VisitSummaryEditor from './pages/doctor/VisitSummaryEditor';
 import ManageSlots from './pages/doctor/ManageSlots';
@@ -42,7 +40,6 @@ import AdminInventory from './pages/admin/AdminInventory';
 
 const Layout = ({ children }) => (
   <div className="min-h-screen flex flex-col bg-slate-50">
-    <DemoModeBanner />
     <Navbar />
     <div className="flex flex-1">
       <Sidebar />
@@ -108,13 +105,9 @@ export default function App() {
             </RoleGuard>
           </ProtectedRoute>
         } />
-        <Route path="/doctor/appointments" element={
-          <ProtectedRoute>
-            <RoleGuard allowedRoles={['doctor', 'admin']}>
-              <Layout><DoctorAppointments /></Layout>
-            </RoleGuard>
-          </ProtectedRoute>
-        } />
+        {/* Phase 5.3: Redirect /doctor/appointments to /doctor/patients */}
+        <Route path="/doctor/appointments" element={<Navigate to="/doctor/patients" replace />} />
+        
         <Route path="/doctor/manage-slots" element={
           <ProtectedRoute>
             <RoleGuard allowedRoles={['doctor', 'admin']}>

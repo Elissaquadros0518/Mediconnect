@@ -68,7 +68,8 @@ async function runTests() {
     '20261027150000_create_core_schema.sql',
     '20261027150100_create_triggers_and_functions.sql',
     '20261027150200_create_row_level_security.sql',
-    '20261027150300_create_storage_configuration.sql'
+    '20261027150300_create_storage_configuration.sql',
+    '20261103150000_mediconnect_complete_upgrade.sql'
   ];
 
   let migrationsOk = true;

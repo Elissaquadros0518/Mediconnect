@@ -48,17 +48,13 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* Doctor Sidebar Navigation (Includes Manage Slots & Visit Summary) */}
+        {/* Doctor Sidebar Navigation (Includes Manage Slots & Visit Summary; Appointments merged into Patient Directory) */}
         {isDoctor && (
           <div className="space-y-1">
             <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Physician Portal</p>
             <Link to="/doctor/dashboard" className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${path === '/doctor/dashboard' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}>
               <LayoutDashboard className="w-4 h-4" />
               <span>Dashboard</span>
-            </Link>
-            <Link to="/doctor/appointments" className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${path === '/doctor/appointments' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}>
-              <Calendar className="w-4 h-4" />
-              <span>Appointments</span>
             </Link>
             <Link to="/doctor/manage-slots" className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition ${path === '/doctor/manage-slots' ? 'bg-teal-50 text-teal-700' : 'text-slate-600 hover:bg-slate-50'}`}>
               <Clock className="w-4 h-4" />

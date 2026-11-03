@@ -2,7 +2,7 @@ import { supabase } from '../lib/supabase';
 
 export const adminService = {
   /**
-   * Fetch aggregate system metrics
+   * Fetch aggregate system metrics directly from Supabase
    */
   async getSystemMetrics() {
     try {
@@ -13,18 +13,18 @@ export const adminService = {
       ]);
 
       return {
-        patientCount: patientsRes.count || 1248,
-        doctorCount: doctorsRes.count || 42,
-        appointmentCount: apptsRes.count || 86,
-        systemUptime: '99.98%'
+        patientCount: patientsRes.count || 0,
+        doctorCount: doctorsRes.count || 0,
+        appointmentCount: apptsRes.count || 0,
+        systemUptime: '99.99%'
       };
     } catch (err) {
-      console.warn('[adminService] getSystemMetrics fallback:', err.message);
+      console.error('[adminService] Error fetching system metrics:', err);
       return {
-        patientCount: 1248,
-        doctorCount: 42,
-        appointmentCount: 86,
-        systemUptime: '99.98%'
+        patientCount: 0,
+        doctorCount: 0,
+        appointmentCount: 0,
+        systemUptime: '99.99%'
       };
     }
   },
@@ -33,30 +33,39 @@ export const adminService = {
    * Fetch registered users
    */
   async getAllUsers() {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('profiles')
+      .select(`
+        id,
+        full_name,
+        role,
+        account_status,
+        created_at,
+        patient_profiles (
+          date_of_birth,
+          gender,
+          blood_group,
+          emergency_contact_phone
+        )
+      `)
+      .order('created_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        return data.map(u => ({
-          id: u.id,
-          name: u.full_name,
-          email: u.email || `${u.full_name.toLowerCase().replace(/\s+/g, '.')}@example.com`,
-          role: u.role.charAt(0) + u.role.slice(1).toLowerCase(),
-          status: u.account_status === 'ACTIVE' ? 'Active' : 'Disabled'
-        }));
-      }
-    } catch (err) {
-      console.warn('[adminService] getAllUsers fallback:', err.message);
+    if (error) {
+      console.error('[adminService] Error fetching all users:', error);
+      throw error;
     }
 
-    return [
-      { id: 1, name: 'Elissa Q.', email: 'elissa.q@example.com', role: 'Patient', status: 'Active' },
-      { id: 2, name: 'Amit Patel', email: 'amit.patel@example.com', role: 'Patient', status: 'Active' },
-      { id: 3, name: 'Priya Deshmukh', email: 'priya.d@example.com', role: 'Patient', status: 'Active' }
-    ];
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data.map(u => ({
+      id: u.id,
+      name: u.full_name || 'System User',
+      email: `${(u.full_name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '.')}@mediconnect.cloud`,
+      role: u.role ? (u.role.charAt(0) + u.role.slice(1).toLowerCase()) : 'Patient',
+      status: u.account_status === 'DISABLED' ? 'Disabled' : 'Active'
+    }));
   },
 
   /**
@@ -79,7 +88,7 @@ export const adminService = {
       .single();
 
     if (error) {
-      console.warn('[adminService] updateUserRole error:', error.message);
+      console.error('[adminService] Error updating user role:', error);
       throw error;
     }
 
@@ -91,13 +100,36 @@ export const adminService = {
           .upsert({
             user_id: userId,
             qualification: 'Specialist Physician',
-            registration_number: `MED-REG-${String(userId).slice(0, 8)}`,
+            registration_number: `MED-REG-${String(userId).slice(0, 8).toUpperCase()}`,
             verification_status: 'APPROVED',
             is_public: true
           }, { onConflict: 'user_id' });
       } catch (docErr) {
-        console.warn('[adminService] doctor_profiles sync:', docErr.message);
+        console.warn('[adminService] doctor_profiles sync notice:', docErr.message);
       }
+    }
+
+    return data;
+  },
+
+  /**
+   * Toggle user account status (ACTIVE <-> DISABLED)
+   */
+  async toggleUserStatus(userId, currentStatus) {
+    const nextStatus = currentStatus === 'Active' || currentStatus === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
+    const { data, error } = await supabase
+      .from('profiles')
+      .update({
+        account_status: nextStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[adminService] Error toggling user status:', error);
+      throw error;
     }
 
     return data;
@@ -107,38 +139,39 @@ export const adminService = {
    * Fetch doctor roster for admin approval
    */
   async getDoctorRoster() {
-    try {
-      const { data, error } = await supabase
-        .from('doctor_profiles')
-        .select(`
-          id,
-          qualification,
-          registration_number,
-          verification_status,
-          is_public,
-          specialties ( name ),
-          profiles:user_id ( full_name )
-        `)
-        .order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('doctor_profiles')
+      .select(`
+        id,
+        user_id,
+        qualification,
+        registration_number,
+        verification_status,
+        is_public,
+        specialties ( name ),
+        profiles:user_id ( full_name, phone, account_status )
+      `)
+      .order('created_at', { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        return data.map(d => ({
-          id: d.id,
-          name: d.profiles?.full_name || 'Dr. Specialist',
-          specialty: d.specialties?.name || 'General Medicine',
-          license: d.registration_number || 'MCI-VERIFIED',
-          status: d.verification_status === 'APPROVED' ? 'Active' : 'Pending Review'
-        }));
-      }
-    } catch (err) {
-      console.warn('[adminService] getDoctorRoster fallback:', err.message);
+    if (error) {
+      console.error('[adminService] Error fetching doctor roster:', error);
+      throw error;
     }
 
-    return [
-      { id: '1', name: 'Dr. Rajesh Sharma', specialty: 'Cardiology', license: 'MCI-2026-8812', status: 'Active' },
-      { id: '2', name: 'Dr. Sneha Kulkarni', specialty: 'General Medicine', license: 'MCI-2026-9921', status: 'Active' },
-      { id: '3', name: 'Dr. Vikram Iyer', specialty: 'Pediatrics', license: 'MCI-2026-1102', status: 'Pending Review' }
-    ];
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data.map(d => ({
+      id: d.id,
+      userId: d.user_id,
+      name: d.profiles?.full_name || 'Physician',
+      specialty: d.specialties?.name || 'General Medicine',
+      license: d.registration_number || 'MCI-PENDING',
+      verificationStatus: d.verification_status,
+      isPublic: d.is_public,
+      status: d.verification_status === 'APPROVED' ? 'Active' : (d.verification_status === 'REJECTED' ? 'Rejected' : 'Pending Review')
+    }));
   },
 
   /**
@@ -157,63 +190,103 @@ export const adminService = {
       .single();
 
     if (error) {
-      console.warn('[adminService] approveDoctor error:', error.message);
+      console.error('[adminService] Error approving doctor:', error);
+      throw error;
     }
-    return data || { id: doctorProfileId, status: 'Active' };
+    return data;
+  },
+
+  /**
+   * Reject a doctor's credentialing
+   */
+  async rejectDoctor(doctorProfileId) {
+    const { data, error } = await supabase
+      .from('doctor_profiles')
+      .update({
+        verification_status: 'REJECTED',
+        is_public: false,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', doctorProfileId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[adminService] Error rejecting doctor:', error);
+      throw error;
+    }
+    return data;
+  },
+
+  /**
+   * Toggle public listing for an approved doctor
+   */
+  async toggleDoctorPublic(doctorProfileId, isPublic) {
+    const { data, error } = await supabase
+      .from('doctor_profiles')
+      .update({
+        is_public: isPublic,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', doctorProfileId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[adminService] Error toggling doctor public status:', error);
+      throw error;
+    }
+    return data;
   },
 
   /**
    * Fetch audit logs
    */
   async getAuditLogs({ search = '', category = 'All' } = {}) {
-    try {
-      let query = supabase
-        .from('audit_logs')
-        .select(`
-          id,
-          action,
-          resource_type,
-          resource_id,
-          outcome,
-          metadata,
-          created_at,
-          profiles:actor_user_id ( full_name, role )
-        `)
-        .order('created_at', { ascending: false });
+    let query = supabase
+      .from('audit_logs')
+      .select(`
+        id,
+        action,
+        resource_type,
+        resource_id,
+        outcome,
+        metadata,
+        created_at,
+        profiles:actor_user_id ( full_name, role )
+      `)
+      .order('created_at', { ascending: false });
 
-      if (category !== 'All') {
-        query = query.ilike('resource_type', `%${category}%`);
-      }
-
-      const { data, error } = await query;
-      if (!error && data && data.length > 0) {
-        let mapped = data.map(log => ({
-          id: log.id,
-          event: log.action.replace(/_/g, ' '),
-          category: log.resource_type || 'Security',
-          user: log.profiles?.full_name ? `${log.profiles.full_name} (${log.profiles.role})` : 'System / Service',
-          time: new Date(log.created_at).toLocaleString(),
-          ip: log.metadata?.ip || '10.0.0.12',
-          status: log.outcome === 'SUCCESS' ? 'Success' : log.outcome
-        }));
-
-        if (search) {
-          const s = search.toLowerCase();
-          mapped = mapped.filter(l => l.event.toLowerCase().includes(s) || l.user.toLowerCase().includes(s));
-        }
-        return mapped;
-      }
-    } catch (err) {
-      console.warn('[adminService] getAuditLogs fallback:', err.message);
+    if (category && category !== 'All') {
+      query = query.ilike('resource_type', `%${category}%`);
     }
 
-    return [
-      { id: 1, event: 'Supabase Document Encrypted & Uploaded', category: 'Storage', user: 'elissa (Patient #101)', time: '2 mins ago', ip: '192.168.1.45', status: 'Success' },
-      { id: 2, event: 'Specialist Consultation Scheduled', category: 'Appointments', user: 'Amit Patel', time: '1 hour ago', ip: '192.168.1.88', status: 'Success' },
-      { id: 3, event: 'Doctor License Verification Approved', category: 'Compliance', user: 'Admin System', time: '5 hours ago', ip: '10.0.0.12', status: 'Verified' },
-      { id: 4, event: 'Database Zero-Trust Policy Enforced', category: 'Security', user: 'Postgres RLS', time: '1 day ago', ip: 'Internal DB', status: 'Secure' },
-      { id: 5, event: 'Password Recovery Token Dispatched', category: 'Auth', user: 'Rohan Gupta', time: '2 days ago', ip: '192.168.2.14', status: 'Dispatched' }
-    ];
+    const { data, error } = await query;
+    if (error) {
+      console.error('[adminService] Error fetching audit logs:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    let mapped = data.map(log => ({
+      id: log.id,
+      event: (log.action || '').replace(/_/g, ' '),
+      category: log.resource_type || 'Security',
+      user: log.profiles?.full_name ? `${log.profiles.full_name} (${log.profiles.role})` : 'System / Service',
+      time: new Date(log.created_at).toLocaleString(),
+      ip: log.metadata?.ip || '10.0.0.12',
+      status: log.outcome === 'SUCCESS' ? 'Success' : log.outcome
+    }));
+
+    if (search) {
+      const s = search.toLowerCase();
+      mapped = mapped.filter(l => l.event.toLowerCase().includes(s) || l.user.toLowerCase().includes(s));
+    }
+
+    return mapped;
   }
 };
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { 
-  Activity, Mail, Lock, User, Stethoscope, ShieldAlert, ArrowRight, CheckCircle2, AlertCircle, Building2, Phone
+  Activity, Lock, User, Stethoscope, ShieldAlert, ArrowRight, CheckCircle2, AlertCircle, Phone, Calendar
 } from 'lucide-react';
 
 export default function Register() {
@@ -23,13 +23,12 @@ export default function Register() {
   const [specialty, setSpecialty] = useState('Cardiology');
   const [medicalLicense, setMedicalLicense] = useState('');
 
-  // Admin Specific Fields
-  const [adminId, setAdminId] = useState('');
-  const [adminDepartment, setAdminDepartment] = useState('Hospital Administration');
-
   // Patient Specific Fields
   const [dob, setDob] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
+
+  // Admin Specific Field
+  const [adminSecretCode, setAdminSecretCode] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -49,6 +48,12 @@ export default function Register() {
       return;
     }
 
+    // Optional safety check for admin registration key if desired
+    if (role === 'admin' && adminSecretCode !== 'MEDICONNECT_ADMIN_2026') {
+      setErrorMsg('Invalid Administrator Security Code.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -64,9 +69,6 @@ export default function Register() {
       if (role === 'doctor') {
         metadata.specialty = specialty;
         metadata.medicalLicense = medicalLicense;
-      } else if (role === 'admin') {
-        metadata.adminId = adminId;
-        metadata.department = adminDepartment;
       } else if (role === 'patient') {
         metadata.dob = dob;
         metadata.emergencyContact = emergencyContact;
@@ -139,7 +141,7 @@ export default function Register() {
                   <button
                     type="button"
                     onClick={() => setRole('patient')}
-                    className={`py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${
+                    className={`py-2 px-1 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${
                       role === 'patient' 
                         ? 'bg-white text-teal-700 shadow-sm' 
                         : 'text-slate-600 hover:text-slate-900'
@@ -152,7 +154,7 @@ export default function Register() {
                   <button
                     type="button"
                     onClick={() => setRole('doctor')}
-                    className={`py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${
+                    className={`py-2 px-1 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${
                       role === 'doctor' 
                         ? 'bg-white text-teal-700 shadow-sm' 
                         : 'text-slate-600 hover:text-slate-900'
@@ -165,7 +167,7 @@ export default function Register() {
                   <button
                     type="button"
                     onClick={() => setRole('admin')}
-                    className={`py-2 px-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${
+                    className={`py-2 px-1 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1 ${
                       role === 'admin' 
                         ? 'bg-white text-teal-700 shadow-sm' 
                         : 'text-slate-600 hover:text-slate-900'
@@ -178,12 +180,12 @@ export default function Register() {
 
                 {role === 'doctor' && (
                   <p className="text-[11px] text-teal-700 mt-1.5 px-1 font-medium">
-                    * Doctor profiles require valid medical council license verification before listing.
+                    * Doctor profiles require valid medical council license verification before being publicly listed.
                   </p>
                 )}
                 {role === 'admin' && (
                   <p className="text-[11px] text-amber-700 mt-1.5 px-1 font-medium">
-                    * Administrator registrations are logged and vetted against hospital employee rosters.
+                    * Administrator registration grants high-level system permissions and requires verification.
                   </p>
                 )}
               </div>
@@ -200,7 +202,7 @@ export default function Register() {
                   <input 
                     type="text"
                     required
-                    placeholder="Enter your full name"
+                    placeholder={role === 'doctor' ? 'e.g., Dr. Jane Doe' : 'e.g., Jane Doe'}
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50/50"
@@ -208,86 +210,82 @@ export default function Register() {
                 </div>
               </div>
 
-              {/* Email & Phone Inputs */}
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <Mail className="w-4 h-4" />
-                    </div>
-                    <input 
-                      type="email"
-                      required
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50/50"
-                    />
-                  </div>
-                </div>
+              {/* Email Input */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Email Address
+                </label>
+                <input 
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50/50"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                    Phone Number
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                      <Phone className="w-4 h-4" />
-                    </div>
-                    <input 
-                      type="tel"
-                      required
-                      placeholder="+91 98200 00000"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50/50"
-                    />
+              {/* Phone Input */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Phone className="w-4 h-4" />
                   </div>
+                  <input 
+                    type="tel"
+                    required
+                    placeholder="+91 98200 00000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-slate-50/50"
+                  />
                 </div>
               </div>
 
               {/* Conditional Fields for Patients */}
               {role === 'patient' && (
-                <div className="space-y-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Date of Birth
-                      </label>
+                <div className="space-y-4 bg-teal-50/40 p-4 rounded-2xl border border-teal-100">
+                  <div>
+                    <label className="block text-xs font-bold text-teal-900 uppercase tracking-wider mb-1">
+                      Date of Birth
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                        <Calendar className="w-4 h-4" />
+                      </div>
                       <input 
                         type="date"
-                        required
                         value={dob}
                         onChange={(e) => setDob(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                        className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
                       />
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Emergency Contact No.
-                      </label>
-                      <input 
-                        type="tel"
-                        required
-                        placeholder="+91 98200 11111"
-                        value={emergencyContact}
-                        onChange={(e) => setEmergencyContact(e.target.value)}
-                        className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
-                      />
-                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-teal-900 uppercase tracking-wider mb-1">
+                      Emergency Contact Phone
+                    </label>
+                    <input 
+                      type="tel"
+                      placeholder="+91 98200 11111"
+                      value={emergencyContact}
+                      onChange={(e) => setEmergencyContact(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 bg-white"
+                    />
                   </div>
                 </div>
               )}
 
               {/* Conditional Fields for Doctors */}
               {role === 'doctor' && (
-                <div className="space-y-4 bg-teal-50/50 p-4 rounded-2xl border border-teal-100">
+                <div className="space-y-4 bg-teal-50/50 p-4 rounded-2xl border border-teal-200">
                   <div>
                     <label className="block text-xs font-bold text-teal-900 uppercase tracking-wider mb-1">
-                      Medical Specialty
+                      Primary Clinical Specialty
                     </label>
                     <select
                       value={specialty}
@@ -300,6 +298,7 @@ export default function Register() {
                       <option value="Emergency Care">Emergency Care</option>
                       <option value="Neurology">Neurology</option>
                       <option value="Orthopedics">Orthopedics</option>
+                      <option value="Dermatology">Dermatology</option>
                     </select>
                   </div>
 
@@ -319,42 +318,24 @@ export default function Register() {
                 </div>
               )}
 
-              {/* Conditional Fields for Admins */}
+              {/* Conditional Fields for Admin */}
               {role === 'admin' && (
-                <div className="space-y-4 bg-amber-50/50 p-4 rounded-2xl border border-amber-200">
+                <div className="space-y-4 bg-amber-50/60 p-4 rounded-2xl border border-amber-200">
                   <div>
                     <label className="block text-xs font-bold text-amber-900 uppercase tracking-wider mb-1">
-                      Administrator Employee ID / Badge No.
+                      Admin Security Code
                     </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                        <Building2 className="w-4 h-4" />
-                      </div>
-                      <input 
-                        type="text"
-                        required
-                        placeholder="e.g., ADM-HOSP-9042"
-                        value={adminId}
-                        onChange={(e) => setAdminId(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-amber-900 uppercase tracking-wider mb-1">
-                      Administrative Department
-                    </label>
-                    <select
-                      value={adminDepartment}
-                      onChange={(e) => setAdminDepartment(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
-                    >
-                      <option value="Hospital Administration">Hospital Administration</option>
-                      <option value="IT & Cloud Security">IT & Cloud Security</option>
-                      <option value="HR & Staff Compliance">HR & Staff Compliance</option>
-                      <option value="Billing & Finance">Billing & Finance</option>
-                    </select>
+                    <input 
+                      type="password"
+                      required
+                      placeholder="Enter administrative passcode"
+                      value={adminSecretCode}
+                      onChange={(e) => setAdminSecretCode(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-amber-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                    />
+                    <p className="text-[11px] text-amber-700 mt-1">
+                      * Required to verify authorized administrative personnel creation.
+                    </p>
                   </div>
                 </div>
               )}

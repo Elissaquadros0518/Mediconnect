@@ -1,95 +1,70 @@
 import { supabase } from '../lib/supabase.js';
 
-let demoSummariesStore = [
-  {
-    id: 'sum-1',
-    appointmentId: 'appt-demo-4',
-    patientName: 'Meera Nair',
-    diagnosis: 'Post-operative recovery assessment',
-    summary: 'Wound healing on schedule. Stitches removed without complications.',
-    medications: 'Cefixime 200mg twice daily for 3 days',
-    followUpDate: '2026-11-15',
-    isPublished: true,
-    date: '2026-10-20'
-  }
-];
-
 export const visitSummaryService = {
   /**
    * Fetch clinical summary for a specific appointment
    */
   async getAppointmentSummary(appointmentId) {
-    try {
-      const { data, error } = await supabase
-        .from('visit_summaries')
-        .select('*')
-        .eq('appointment_id', appointmentId)
-        .maybeSingle();
+    const { data, error } = await supabase
+      .from('visit_summaries')
+      .select('*')
+      .eq('appointment_id', appointmentId)
+      .maybeSingle();
 
-      if (!error && data) {
-        return data;
-      }
-    } catch (err) {
-      console.warn('[visitSummaryService] getAppointmentSummary fallback:', err.message);
+    if (error) {
+      console.error('[visitSummaryService] Error fetching appointment summary:', error);
+      throw error;
     }
 
-    const found = demoSummariesStore.find(s => s.appointmentId === appointmentId);
-    return found || null;
+    return data || null;
   },
 
   /**
    * Fetch appointment details for composing or reviewing a summary
    */
   async getAppointmentDetailsForSummary(appointmentId) {
-    try {
-      const { data, error } = await supabase
-        .from('appointments')
-        .select(`
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        patient_id,
+        doctor_id,
+        consultation_reason,
+        status,
+        created_at,
+        profiles:patient_id (
           id,
-          patient_id,
-          doctor_id,
-          consultation_reason,
-          status,
-          created_at,
-          profiles:patient_id (
-            id,
-            full_name,
-            phone
-          ),
-          availability_slots:slot_id (
-            start_time,
-            end_time
-          )
-        `)
-        .eq('id', appointmentId)
-        .maybeSingle();
+          full_name,
+          phone
+        ),
+        availability_slots:slot_id (
+          start_time,
+          end_time
+        )
+      `)
+      .eq('id', appointmentId)
+      .maybeSingle();
 
-      if (!error && data) {
-        const startTime = data.availability_slots?.start_time ? new Date(data.availability_slots.start_time) : new Date(data.created_at);
-        return {
-          id: data.id,
-          patientId: data.patient_id,
-          patientName: data.profiles?.full_name || 'Patient',
-          patientPhone: data.profiles?.phone || '',
-          doctorId: data.doctor_id,
-          date: startTime.toISOString().split('T')[0],
-          reason: data.consultation_reason || 'General Consultation',
-          status: data.status
-        };
-      }
-    } catch (err) {
-      console.warn('[visitSummaryService] getAppointmentDetails fallback:', err.message);
+    if (error) {
+      console.error('[visitSummaryService] Error fetching appointment details:', error);
+      throw error;
     }
 
+    if (!data) return null;
+
+    const startTime = data.availability_slots?.start_time
+      ? new Date(data.availability_slots.start_time)
+      : new Date(data.created_at);
+
     return {
-      id: appointmentId || 'appt-demo-1',
-      patientId: 'patient-demo-1',
-      patientName: 'Amit Patel',
-      patientPhone: '+91 98201 23456',
-      doctorId: 'doc-demo-1',
-      date: new Date().toISOString().split('T')[0],
-      reason: 'Mild chest tightness and breathlessness during exertion',
-      status: 'CONFIRMED'
+      id: data.id,
+      patientId: data.patient_id,
+      patientName: data.profiles?.full_name || 'Patient',
+      patientPhone: data.profiles?.phone || '',
+      doctorId: data.doctor_id,
+      date: startTime.toISOString().split('T')[0],
+      reason: data.consultation_reason || 'General Consultation',
+      status: data.status
     };
   },
 
@@ -97,55 +72,56 @@ export const visitSummaryService = {
    * Fetch all summaries created by a doctor (both published and drafts)
    */
   async getDoctorSummaries(doctorUserId) {
-    try {
-      const { data: docProfile } = await supabase
-        .from('doctor_profiles')
-        .select('id')
-        .eq('user_id', doctorUserId)
-        .maybeSingle();
+    const { data: docProfile, error: docErr } = await supabase
+      .from('doctor_profiles')
+      .select('id')
+      .eq('user_id', doctorUserId)
+      .maybeSingle();
 
-      if (docProfile) {
-        const { data, error } = await supabase
-          .from('visit_summaries')
-          .select(`
-            id,
-            appointment_id,
-            doctor_id,
-            patient_id,
-            summary,
-            diagnosis,
-            prescribed_medications,
-            follow_up_date,
-            is_published,
-            published_at,
-            created_at,
-            profiles:patient_id (
-              full_name
-            )
-          `)
-          .eq('doctor_id', docProfile.id)
-          .order('created_at', { ascending: false });
+    if (docErr) throw docErr;
+    if (!docProfile) return [];
 
-        if (!error && data) {
-          return data.map(s => ({
-            id: s.id,
-            appointmentId: s.appointment_id,
-            patientName: s.profiles?.full_name || 'Patient',
-            diagnosis: s.diagnosis || 'Clinical Consultation',
-            summary: s.summary,
-            medications: s.prescribed_medications,
-            followUpDate: s.follow_up_date,
-            isPublished: s.is_published,
-            date: new Date(s.created_at).toISOString().split('T')[0]
-          }));
-        }
-      }
-    } catch (err) {
-      console.warn('[visitSummaryService] getDoctorSummaries fallback:', err.message);
+    const { data, error } = await supabase
+      .from('visit_summaries')
+      .select(`
+        id,
+        appointment_id,
+        doctor_id,
+        patient_id,
+        summary,
+        diagnosis,
+        prescribed_medications,
+        follow_up_date,
+        is_published,
+        published_at,
+        created_at,
+        profiles:patient_id (
+          full_name
+        )
+      `)
+      .eq('doctor_id', docProfile.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[visitSummaryService] Error fetching doctor summaries:', error);
+      throw error;
     }
 
-    // Default demo summaries for smooth demonstration
-    return [...demoSummariesStore];
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    return data.map(s => ({
+      id: s.id,
+      appointmentId: s.appointment_id,
+      patientName: s.profiles?.full_name || 'Patient',
+      diagnosis: s.diagnosis || 'Clinical Consultation',
+      summary: s.summary,
+      medications: s.prescribed_medications,
+      followUpDate: s.follow_up_date,
+      isPublished: s.is_published,
+      date: new Date(s.created_at).toISOString().split('T')[0]
+    }));
   },
 
   /**
@@ -161,37 +137,33 @@ export const visitSummaryService = {
     followUpDate,
     isPublished = true
   }) {
-    // Resolve doctor profile ID if auth user ID was passed
     let resolvedDoctorId = doctorId;
     let resolvedPatientId = patientId;
 
-    try {
-      if (doctorId) {
-        const { data: docProfile } = await supabase
-          .from('doctor_profiles')
-          .select('id')
-          .eq('user_id', doctorId)
-          .maybeSingle();
+    // Resolve doctor profile ID if auth user ID was passed
+    if (doctorId) {
+      const { data: docProfile } = await supabase
+        .from('doctor_profiles')
+        .select('id')
+        .eq('user_id', doctorId)
+        .maybeSingle();
 
-        if (docProfile) {
-          resolvedDoctorId = docProfile.id;
-        }
+      if (docProfile) {
+        resolvedDoctorId = docProfile.id;
       }
+    }
 
-      if (!resolvedPatientId && appointmentId) {
-        const { data: appt } = await supabase
-          .from('appointments')
-          .select('patient_id, doctor_id')
-          .eq('id', appointmentId)
-          .maybeSingle();
+    if (!resolvedPatientId && appointmentId) {
+      const { data: appt } = await supabase
+        .from('appointments')
+        .select('patient_id, doctor_id')
+        .eq('id', appointmentId)
+        .maybeSingle();
 
-        if (appt) {
-          resolvedPatientId = appt.patient_id;
-          if (!resolvedDoctorId) resolvedDoctorId = appt.doctor_id;
-        }
+      if (appt) {
+        resolvedPatientId = appt.patient_id;
+        if (!resolvedDoctorId) resolvedDoctorId = appt.doctor_id;
       }
-    } catch (lookupErr) {
-      console.warn('[visitSummaryService] ID resolution notice:', lookupErr.message);
     }
 
     const payload = {
@@ -207,69 +179,28 @@ export const visitSummaryService = {
       updated_at: new Date().toISOString()
     };
 
-    try {
-      const { data, error } = await supabase
-        .from('visit_summaries')
-        .upsert(payload, { onConflict: 'appointment_id' })
-        .select()
-        .single();
+    const { data, error } = await supabase
+      .from('visit_summaries')
+      .upsert(payload, { onConflict: 'appointment_id' })
+      .select()
+      .single();
 
-      if (error) {
-        console.warn('[visitSummaryService] saveSummary upsert error:', error.message);
-      }
-
-      if (isPublished && resolvedPatientId) {
-        // Send notification to patient
-        await supabase.from('notifications').insert({
-          user_id: resolvedPatientId,
-          title: 'Consultation Summary Published',
-          message: `Your doctor has published the visit summary and prescription for your consultation.`,
-          type: 'SUMMARY',
-          related_resource_id: appointmentId
-        }).then(() => {}).catch(() => {});
-      }
-
-      // Keep in-memory store synchronized for demo
-      const demoEntry = {
-        id: data?.id || `sum-${Date.now()}`,
-        appointmentId,
-        patientName: resolvedPatientId === 'patient-demo-2' ? 'Priya Deshmukh' : resolvedPatientId === 'patient-demo-3' ? 'Rohan Gupta' : resolvedPatientId === 'patient-demo-4' ? 'Meera Nair' : 'Amit Patel',
-        diagnosis,
-        summary,
-        medications,
-        followUpDate: followUpDate || null,
-        isPublished,
-        date: new Date().toISOString().split('T')[0]
-      };
-      const existingIdx = demoSummariesStore.findIndex(s => s.appointmentId === appointmentId);
-      if (existingIdx >= 0) {
-        demoSummariesStore[existingIdx] = demoEntry;
-      } else {
-        demoSummariesStore.unshift(demoEntry);
-      }
-
-      return data || payload;
-    } catch (err) {
-      console.warn('[visitSummaryService] Fallback saveSummary:', err.message);
-      const demoEntry = {
-        id: `sum-${Date.now()}`,
-        appointmentId,
-        patientName: resolvedPatientId === 'patient-demo-2' ? 'Priya Deshmukh' : resolvedPatientId === 'patient-demo-3' ? 'Rohan Gupta' : resolvedPatientId === 'patient-demo-4' ? 'Meera Nair' : 'Amit Patel',
-        diagnosis,
-        summary,
-        medications,
-        followUpDate: followUpDate || null,
-        isPublished,
-        date: new Date().toISOString().split('T')[0]
-      };
-      const existingIdx = demoSummariesStore.findIndex(s => s.appointmentId === appointmentId);
-      if (existingIdx >= 0) {
-        demoSummariesStore[existingIdx] = demoEntry;
-      } else {
-        demoSummariesStore.unshift(demoEntry);
-      }
-      return payload;
+    if (error) {
+      console.error('[visitSummaryService] Error saving visit summary:', error);
+      throw error;
     }
+
+    if (isPublished && resolvedPatientId) {
+      await supabase.from('notifications').insert({
+        user_id: resolvedPatientId,
+        title: 'Consultation Summary Published',
+        message: 'Your physician has published the visit summary and prescription for your consultation.',
+        type: 'SUMMARY',
+        related_resource_id: appointmentId
+      }).then(() => {}).catch(() => {});
+    }
+
+    return data;
   }
 };
 
