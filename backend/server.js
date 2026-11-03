@@ -3,7 +3,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import { testConnection } from './src/config/db.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 
 import doctorRoutes from './src/routes/doctorRoutes.js';
@@ -15,6 +14,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
+  'https://kind-field-046042f00.3.azurestaticapps.net',
   'https://blue-cliff-0c3f95400.4.azurestaticapps.net',
   'http://localhost:3000',
   'http://localhost:5173',
@@ -40,7 +40,6 @@ app.use('/api/documents', documentRoutes);
 
 app.use(errorHandler);
 
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`MediConnect Cloud Backend running on port ${PORT}`);
-  await testConnection();
 });
