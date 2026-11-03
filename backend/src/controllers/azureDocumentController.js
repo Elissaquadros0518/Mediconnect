@@ -50,6 +50,58 @@ function getErrorStatus(error) {
   return 500;
 }
 
+function sanitizeDiagnosticText(value, maxLength = 240) {
+  return String(value ?? '')
+    .replace(/https?:\/\/[^\s"'<>]+/gi, '[url]')
+    .replace(/\bBearer\s+[^\s,;]+/gi, 'Bearer [redacted]')
+    .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, '[token]')
+    .replace(/\bazure\/patients\/[^\s"'<>?]+/gi, '[blob-path]')
+    .replace(/\b(?:authorization|access[_-]?token|refresh[_-]?token|client[_-]?secret|password|sig|sas|token)\s*[:=]\s*[^\s,;&]+(?:&[^\s,;]+)*/gi, '[credential-redacted]')
+    .replace(/\?[^\s"'<>]*/g, '?[redacted]')
+    .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, '[id]')
+    .replace(/[\r\n\t]+/g, ' ')
+    .slice(0, maxLength);
+}
+
+function logOperationError(operation, error) {
+  const source = error && typeof error === 'object' ? error : {};
+  const rawName = typeof source.name === 'string'
+    ? source.name
+    : (error == null ? 'MissingError' : (typeof error === 'string' ? 'ThrownString' : 'ThrownValue'));
+  const rawMessage = typeof source.message === 'string'
+    ? source.message
+    : (typeof error === 'string' ? error : 'No error message available');
+  const safeCode = typeof source.code === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(source.code)
+    ? source.code
+    : undefined;
+  const rawStatus = source.statusCode ?? source.status;
+  const status = Number.isInteger(rawStatus) && rawStatus >= 100 && rawStatus <= 599 ? rawStatus : undefined;
+
+  console.error('[document-upload-diagnostic]', JSON.stringify({
+    operation,
+    name: sanitizeDiagnosticText(rawName, 80),
+    message: sanitizeDiagnosticText(rawMessage),
+    ...(safeCode ? { code: safeCode } : {}),
+    ...(status ? { status } : {})
+  }));
+}
+
+async function deleteBlobWithDiagnostics(blobClient) {
+  try {
+    const deleted = await deleteBlob(blobClient);
+    if (!deleted) {
+      logOperationError('azure_blob_cleanup', {
+        name: 'BlobCleanupError',
+        message: 'Blob delete operation reported that no blob was deleted.'
+      });
+    }
+    return deleted;
+  } catch (error) {
+    logOperationError('azure_blob_cleanup', error);
+    throw error;
+  }
+}
+
 export async function createAzureUploadUrl(req, res, next) {
   try {
     const { originalFilename, mimeType, fileSize } = req.body || {};
@@ -81,6 +133,7 @@ export async function createAzureUploadUrl(req, res, next) {
 
 export async function completeAzureUpload(req, res, next) {
   let blobClient;
+  let operation = 'patient_profile_lookup';
   try {
     const { blobName, originalFilename, documentType } = req.body || {};
     if (!await isAuthenticatedPatient(req)) {
@@ -96,6 +149,7 @@ export async function completeAzureUpload(req, res, next) {
       return res.status(400).json({ error: 'A supported document type is required.' });
     }
 
+    operation = 'azure_blob_property_lookup';
     const inspectedBlob = await inspectUploadedBlob(blobName);
     blobClient = inspectedBlob.blobClient;
     const { properties } = inspectedBlob;
@@ -106,16 +160,21 @@ export async function completeAzureUpload(req, res, next) {
     });
 
     if (validationError) {
-      await deleteBlob(blobClient);
+      operation = 'azure_blob_cleanup';
+      await deleteBlobWithDiagnostics(blobClient);
       return res.status(400).json({ error: 'Uploaded document must be a supported file type no larger than 20 MiB.' });
     }
 
-    if (!await hasValidDocumentSignature(blobClient, properties.contentType, properties.contentLength)) {
-      await deleteBlob(blobClient);
+    operation = 'azure_document_signature_read';
+    const validSignature = await hasValidDocumentSignature(blobClient, properties.contentType, properties.contentLength);
+    if (!validSignature) {
+      operation = 'azure_blob_cleanup';
+      await deleteBlobWithDiagnostics(blobClient);
       blobClient = null;
       return res.status(400).json({ error: 'The uploaded file content does not match its declared document type.' });
     }
 
+    operation = 'supabase_metadata_insert';
     const userSupabase = getUserSupabase(req);
     const { data: document, error } = await userSupabase
       .from('medical_documents')
@@ -132,8 +191,12 @@ export async function completeAzureUpload(req, res, next) {
       .single();
 
     if (error) {
-      const deleted = await deleteBlob(blobClient);
-      if (!deleted) error.message = `${error.message}; uploaded blob cleanup did not complete.`;
+      logOperationError(operation, error);
+      try {
+        await deleteBlobWithDiagnostics(blobClient);
+      } catch {
+        // Cleanup failure is logged separately; preserve the original Supabase error.
+      }
       return next(error);
     }
 
@@ -147,11 +210,12 @@ export async function completeAzureUpload(req, res, next) {
       }
     });
   } catch (error) {
+    logOperationError(operation, error);
     if (blobClient) {
       try {
-        await deleteBlob(blobClient);
-      } catch (cleanupError) {
-        error.message = `${error.message}; uploaded blob cleanup failed: ${cleanupError.message}`;
+        await deleteBlobWithDiagnostics(blobClient);
+      } catch {
+        // Cleanup failure is logged separately; preserve the original operation error.
       }
     }
     if (getErrorStatus(error) === 404) return res.status(404).json({ error: 'Uploaded blob was not found.' });
