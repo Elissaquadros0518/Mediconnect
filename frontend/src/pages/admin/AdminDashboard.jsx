@@ -163,53 +163,54 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs space-y-1">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Registered Patients</span>
-            <div className="p-2 bg-teal-50 text-teal-700 rounded-xl">
-              <Users className="w-4 h-4" />
+      {/* Metrics Grid — spacious, responsive KPI cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
+        {[
+          {
+            label: 'Registered Patients', value: metrics.patientCount,
+            detail: 'Patient accounts', icon: Users,
+            iconStyle: 'bg-teal-50 text-teal-700', accent: 'bg-teal-500'
+          },
+          {
+            label: 'Active Specialists', value: metrics.doctorCount,
+            detail: `${doctors.filter(d => d.status === 'Pending Review').length} awaiting verification`,
+            icon: UserCheck, iconStyle: 'bg-sky-50 text-sky-700', accent: 'bg-sky-500'
+          },
+          {
+            label: 'Hospital Visits', value: metrics.appointmentCount,
+            detail: 'Appointments across clinics', icon: Calendar,
+            iconStyle: 'bg-indigo-50 text-indigo-700', accent: 'bg-indigo-500'
+          },
+          {
+            label: 'Inventory Health', value: `${inventoryItems.length} SKUs`,
+            detail: `${inventoryMetrics.lowStockCount} items below threshold`,
+            icon: Package, iconStyle: 'bg-amber-50 text-amber-700', accent: 'bg-amber-500',
+            warning: inventoryMetrics.lowStockCount > 0
+          }
+        ].map(({ label, value, detail, icon: Icon, iconStyle, accent, warning }) => (
+          <div
+            key={label}
+            className="relative min-w-0 min-h-[166px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 lg:p-6 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <div className={`absolute left-0 top-5 bottom-5 w-1 rounded-r-full ${accent}`} />
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 pt-1 text-xs font-bold uppercase tracking-wide leading-5 text-slate-500">
+                {label}
+              </p>
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${iconStyle}`}>
+                <Icon className="h-5 w-5" aria-hidden="true" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <p className="text-3xl font-extrabold leading-tight tracking-tight text-slate-900">
+                {loading ? '—' : value}
+              </p>
+              <p className={`mt-2 text-xs font-medium leading-5 ${warning ? 'text-amber-700' : 'text-slate-500'}`}>
+                {detail}
+              </p>
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900">{metrics.patientCount}</p>
-          <p className="text-[10px] text-emerald-600 font-semibold">+18 new this week</p>
-        </div>
-
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs space-y-1">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Active Specialists</span>
-            <div className="p-2 bg-sky-50 text-sky-700 rounded-xl">
-              <UserCheck className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-black text-slate-900">{metrics.doctorCount}</p>
-          <p className="text-[10px] text-slate-500">{doctors.filter(d => d.status === 'Pending Review').length} awaiting verification</p>
-        </div>
-
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs space-y-1">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Hospital Visits</span>
-            <div className="p-2 bg-indigo-50 text-indigo-700 rounded-xl">
-              <Calendar className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-black text-slate-900">{metrics.appointmentCount}</p>
-          <p className="text-[10px] text-slate-500">Across all hospital clinics</p>
-        </div>
-
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs space-y-1">
-          <div className="flex justify-between items-center text-slate-400">
-            <span className="text-[11px] font-bold uppercase tracking-wider">Inventory Health</span>
-            <div className="p-2 bg-amber-50 text-amber-700 rounded-xl">
-              <Package className="w-4 h-4" />
-            </div>
-          </div>
-          <p className="text-2xl font-black text-slate-900">{inventoryItems.length} SKUs</p>
-          <p className={`text-[10px] font-bold ${inventoryMetrics.lowStockCount > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-            {inventoryMetrics.lowStockCount} items below threshold
-          </p>
-        </div>
+        ))}
       </div>
 
       {/* Interactive Management Hub */}
