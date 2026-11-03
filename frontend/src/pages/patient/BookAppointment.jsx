@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  Calendar as CalendarIcon, Clock, Stethoscope, CheckCircle2, Loader2, Star, Award, MapPin, AlertCircle
+  Calendar as CalendarIcon, Clock, Stethoscope, CheckCircle2, Loader2, Star, Award, MapPin, AlertCircle, UserCheck
 } from 'lucide-react';
 import { doctorService } from '../../services/doctorService';
 import { appointmentService } from '../../services/appointmentService';
@@ -100,9 +100,11 @@ export default function BookAppointment() {
       await appointmentService.bookAppointment({
         slotId: selectedSlot.id,
         doctorId: selectedDoctor.id,
+        doctor_id: selectedDoctor.id,
+        doctorName: selectedDoctor.name,
         reason: notes || 'General Specialist Consultation',
-        date,
-        time: selectedSlot.time
+        appointment_date: date,
+        appointment_time: selectedSlot.time
       });
 
       setSuccess(true);
@@ -122,7 +124,7 @@ export default function BookAppointment() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pt-1 pb-8 px-4 font-sans">
       
-      {/* Header Banner - Enlarged with reduced top padding */}
+      {/* Header Banner */}
       <div className="bg-gradient-to-r from-teal-700 via-sky-800 to-indigo-900 rounded-3xl p-8 md:p-12 text-white shadow-2xl mt-1">
         <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Book a Specialist Consultation</h1>
         <p className="text-teal-100 text-sm md:text-base mt-2 max-w-2xl leading-relaxed">
@@ -130,7 +132,7 @@ export default function BookAppointment() {
         </p>
       </div>
 
-      {/* Expanded Main Content Box */}
+      {/* Main Content Box */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-6 md:p-10 shadow-lg min-h-[500px]">
         {success ? (
           <div className="py-20 text-center space-y-4">
@@ -152,7 +154,6 @@ export default function BookAppointment() {
 
             {/* DOCTOR SELECTION SECTION */}
             <div className="space-y-4 border-b border-slate-100 pb-5">
-              {/* Header Section */}
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                 <div>
                   <h3 className="text-lg font-bold text-slate-900 flex items-center space-x-2.5">
@@ -167,7 +168,7 @@ export default function BookAppointment() {
                 </div>
               </div>
 
-              {/* Clean, horizontally-spaced filter pills with smooth scrolling */}
+              {/* Specialty Filter Pills */}
               <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-none">
                 {['All', 'Cardiology', 'General Medicine', 'Orthopedics', 'Pediatrics', 'Neurology', 'Dermatology', 'Emergency Care'].map((spec) => (
                   <button
@@ -194,7 +195,7 @@ export default function BookAppointment() {
                   No active verified physicians are currently available in the database.
                 </div>
               ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pt-3">
+                <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 pt-3">
                   {filteredDoctors.map((doc) => {
                     const isSelected = selectedDoctor?.id === doc.id;
                     return (
@@ -210,23 +211,22 @@ export default function BookAppointment() {
                             : 'border-slate-200/80 bg-white hover:border-slate-300 hover:shadow-md'
                         }`}
                       >
-                        <div className="flex items-start space-x-3.5">
-                          <img 
-                            src={doc.avatar || 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=400'} 
-                            alt={doc.name} 
-                            className="w-14 h-14 rounded-2xl object-cover shrink-0 border border-slate-200 shadow-sm group-hover:scale-105 transition" 
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold text-slate-900 text-sm truncate">{doc.name}</span>
-                              <span className="text-[11px] font-bold text-amber-600 flex items-center bg-amber-50 px-1.5 py-0.5 rounded-md">
-                                <Star className="w-3 h-3 fill-amber-500 text-amber-500 mr-0.5" />
-                                {doc.rating || 4.8}
-                              </span>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start space-x-3.5 min-w-0">
+                            <div className="p-3 bg-teal-100/60 text-teal-700 rounded-2xl shrink-0">
+                              <UserCheck className="w-6 h-6" />
                             </div>
-                            <p className="text-xs text-teal-700 font-semibold">{doc.specialty}</p>
-                            <p className="text-[11px] text-slate-500 truncate mt-0.5">{doc.qualification}</p>
+                            <div className="min-w-0">
+                              <h4 className="font-bold text-slate-900 text-base truncate pr-2">{doc.name}</h4>
+                              <p className="text-xs text-teal-700 font-semibold">{doc.specialty}</p>
+                              <p className="text-xs text-slate-500 truncate mt-0.5">{doc.qualification}</p>
+                            </div>
                           </div>
+                          
+                          <span className="text-xs font-bold text-amber-600 flex items-center bg-amber-50 px-2 py-1 rounded-lg shrink-0 border border-amber-100">
+                            <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 mr-1" />
+                            {doc.rating || 4.8}
+                          </span>
                         </div>
 
                         <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
@@ -251,7 +251,9 @@ export default function BookAppointment() {
               <div className="space-y-6 pt-2 animate-fadeIn">
                 <div className="bg-teal-50/60 border border-teal-100 p-4 rounded-2xl flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <img src={selectedDoctor.avatar} alt={selectedDoctor.name} className="w-10 h-10 rounded-xl object-cover" />
+                    <div className="p-2.5 bg-teal-600 text-white rounded-xl">
+                      <Stethoscope className="w-5 h-5" />
+                    </div>
                     <div>
                       <p className="text-xs text-teal-800 font-semibold uppercase tracking-wider">Selected Specialist</p>
                       <h4 className="text-sm font-bold text-slate-900">{selectedDoctor.name} ({selectedDoctor.specialty})</h4>

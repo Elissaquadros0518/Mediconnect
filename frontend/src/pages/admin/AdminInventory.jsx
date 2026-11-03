@@ -120,19 +120,6 @@ export default function AdminInventory() {
       <div className="bg-gradient-to-r from-teal-800 via-teal-900 to-slate-900 rounded-3xl p-6 md:p-8 text-white shadow-lg border border-teal-700/30">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-white/10 text-teal-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center space-x-1.5 backdrop-blur-sm border border-white/10">
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-300" />
-                <span>Hospital Materials Management</span>
-              </span>
-              <span className="bg-amber-400 text-amber-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                DEMO DATA
-              </span>
-              <span className="bg-emerald-400/20 text-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-400/30">
-                PostgreSQL Supply Ledger
-              </span>
-            </div>
-
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
               Hospital Inventory & Pharmacy Depot
             </h1>
@@ -227,55 +214,63 @@ export default function AdminInventory() {
       )}
 
       {/* KPI Overview Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs space-y-1">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-2">
           <div className="flex justify-between items-center text-slate-400">
             <span className="text-[11px] font-bold uppercase tracking-wider">Total SKUs</span>
-            <div className="p-2 bg-teal-50 text-teal-700 rounded-xl">
+            <div className="p-2.5 bg-teal-50 text-teal-700 rounded-2xl">
               <Package className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900">{metrics.totalSKUs}</p>
-          <p className="text-[10px] text-slate-500">Across 4 hospital categories</p>
+          <div>
+            <p className="text-3xl font-black text-slate-900 tracking-tight">{metrics.totalSKUs}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Across 4 hospital categories</p>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-2">
           <div className="flex justify-between items-center text-slate-400">
             <span className="text-[11px] font-bold uppercase tracking-wider">Units in Stock</span>
-            <div className="p-2 bg-sky-50 text-sky-700 rounded-xl">
+            <div className="p-2.5 bg-sky-50 text-sky-700 rounded-2xl">
               <Layers className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900">{metrics.totalUnits.toLocaleString()}</p>
-          <p className="text-[10px] text-emerald-600 font-semibold">Active clinical availability</p>
+          <div>
+            <p className="text-3xl font-black text-slate-900 tracking-tight">{metrics.totalUnits.toLocaleString()}</p>
+            <p className="text-[11px] text-emerald-600 font-semibold mt-0.5">Active clinical availability</p>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-2">
           <div className="flex justify-between items-center text-slate-400">
             <span className="text-[11px] font-bold uppercase tracking-wider">Stock Alerts</span>
-            <div className="p-2 bg-amber-50 text-amber-700 rounded-xl">
+            <div className="p-2.5 bg-amber-50 text-amber-700 rounded-2xl">
               <AlertTriangle className="w-4 h-4" />
             </div>
           </div>
-          <p className={`text-2xl font-black ${metrics.lowStockCount > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
-            {metrics.lowStockCount}
-          </p>
-          <p className="text-[10px] text-slate-500">
-            {metrics.criticalStockCount} critical • {metrics.lowStockCount - metrics.criticalStockCount} warning
-          </p>
+          <div>
+            <p className={`text-3xl font-black tracking-tight ${metrics.lowStockCount > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+              {metrics.lowStockCount}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {metrics.criticalStockCount} critical • {metrics.lowStockCount - metrics.criticalStockCount} warning
+            </p>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4.5 shadow-xs space-y-1">
+        <div className="bg-white border border-slate-200/90 rounded-3xl p-5 shadow-xs space-y-2">
           <div className="flex justify-between items-center text-slate-400">
             <span className="text-[11px] font-bold uppercase tracking-wider">Asset Valuation</span>
-            <div className="p-2 bg-indigo-50 text-indigo-700 rounded-xl">
+            <div className="p-2.5 bg-indigo-50 text-indigo-700 rounded-2xl">
               <DollarSign className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-slate-900">
-            ₹{metrics.totalValuation.toLocaleString('en-IN')}
-          </p>
-          <p className="text-[10px] text-slate-500">Estimated acquisition cost</p>
+          <div>
+            <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate">
+              ₹{metrics.totalValuation.toLocaleString('en-IN')}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-0.5">Estimated acquisition cost</p>
+          </div>
         </div>
       </div>
 
@@ -339,9 +334,6 @@ export default function AdminInventory() {
             </h3>
             <p className="text-xs text-slate-400">Displaying {items.length} registered clinical supply items</p>
           </div>
-          <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
-            PostgreSQL Table: <span className="font-mono text-teal-700">inventory_items</span>
-          </span>
         </div>
 
         <div className="overflow-x-auto">
@@ -670,4 +662,3 @@ export default function AdminInventory() {
     </div>
   );
 }
-

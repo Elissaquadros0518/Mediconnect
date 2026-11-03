@@ -13,8 +13,7 @@ export default function AdminDashboard() {
   const [metrics, setMetrics] = useState({
     patientCount: 1248,
     doctorCount: 42,
-    appointmentCount: 86,
-    systemUptime: '99.98%'
+    appointmentCount: 86
   });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('doctors'); // 'doctors' | 'patients' | 'appointments' | 'inventory'
@@ -127,30 +126,12 @@ export default function AdminDashboard() {
       <div className="bg-gradient-to-r from-teal-800 via-teal-900 to-slate-900 rounded-3xl p-6 md:p-8 text-white shadow-lg border border-teal-700/30">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="bg-white/10 text-teal-200 text-[11px] font-semibold px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center space-x-1.5 backdrop-blur-sm border border-white/10">
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-300" />
-                <span>Supabase Master Operations Center</span>
-              </span>
-              <span className="bg-amber-400 text-amber-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
-                DEMO DATA
-              </span>
-              <span className="bg-emerald-400/20 text-emerald-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-emerald-400/30">
-                PostgreSQL Role: ADMIN
-              </span>
-            </div>
-
             <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
               MediConnect Master Admin Dashboard
             </h1>
             <p className="text-teal-200/90 text-xs md:text-sm max-w-2xl leading-relaxed">
               Unified governance hub: Manage patient care records, verify specialist physician credentials, supervise hospital appointments, and oversee medical inventory stock levels.
             </p>
-          </div>
-
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-2xl text-center shrink-0 w-full sm:w-auto">
-            <p className="text-2xl font-black text-emerald-300">{metrics.systemUptime}</p>
-            <p className="text-[11px] text-teal-200 uppercase tracking-wider font-bold">PostgreSQL Engine Uptime</p>
           </div>
         </div>
       </div>
@@ -163,7 +144,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Metrics Grid — spacious, responsive KPI cards */}
+      {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 lg:gap-5">
         {[
           {
@@ -311,7 +292,7 @@ export default function AdminDashboard() {
                         </span>
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        <strong className="text-slate-700">{doc.specialty}</strong> • License: <span className="font-mono text-slate-600">{doc.license}</span>
+                        <strong className="text-slate-700">{doc.specialty}</strong> | License: <span className="font-mono text-slate-600">{doc.license}</span>
                       </p>
                     </div>
                   </div>
@@ -445,7 +426,7 @@ export default function AdminDashboard() {
                     </div>
                     <p className="text-xs text-slate-500">
                       <Clock className="w-3 h-3 inline mr-1 text-slate-400" />
-                      {appt.date} at {appt.time} • <span className="text-slate-600">{appt.reason}</span>
+                      {appt.date} at {appt.time} | <span className="text-slate-600">{appt.reason}</span>
                     </p>
                   </div>
 

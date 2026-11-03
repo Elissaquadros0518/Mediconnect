@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  FileText, Upload, Download, Clock, CheckCircle2, X, ShieldCheck, Loader2, AlertCircle 
+  FileText, Upload, Download, Clock, CheckCircle2, X, Loader2, AlertCircle 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { documentService } from '../../services/documentService';
@@ -86,13 +86,9 @@ export default function PatientRecords() {
       {/* Banner */}
       <div className="bg-gradient-to-r from-teal-600 to-sky-700 rounded-3xl p-6 md:p-8 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <span className="bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider flex items-center w-max space-x-1.5">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>Supabase Private Storage</span>
-          </span>
-          <h1 className="text-2xl md:text-3xl font-extrabold mt-2">Medical Records & Vault</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold">Medical Records & Vault</h1>
           <p className="text-teal-100 text-sm mt-1">
-            Access previous diagnostic reports or upload new health documents with zero-trust storage policies.
+            Access previous diagnostic reports or upload new health documents securely.
           </p>
         </div>
         <button 
@@ -111,13 +107,12 @@ export default function PatientRecords() {
             <FileText className="w-5 h-5 text-sky-600" />
             <span>Diagnostic Vault Records ({records.length})</span>
           </h2>
-          <span className="text-xs text-slate-400 font-medium">PostgreSQL Metadata & Private Storage</span>
         </div>
 
         {loading ? (
           <div className="py-16 text-center">
             <Loader2 className="w-7 h-7 text-teal-600 animate-spin mx-auto" />
-            <p className="text-xs text-slate-400 mt-2">Loading encrypted records from Supabase...</p>
+            <p className="text-xs text-slate-400 mt-2">Loading medical records...</p>
           </div>
         ) : records.length === 0 ? (
           <div className="py-12 text-center text-slate-400 space-y-2">
@@ -133,7 +128,7 @@ export default function PatientRecords() {
                   <span className="font-bold text-slate-900 text-sm block">{rec.title}</span>
                   <div className="text-xs text-slate-500 flex items-center space-x-2">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Uploaded on {rec.date} • Attending: {rec.doctor} ({rec.size})</span>
+                    <span>Uploaded on {rec.date} | Attending: {rec.doctor} ({rec.size})</span>
                   </div>
                 </div>
                 <button 
@@ -162,7 +157,7 @@ export default function PatientRecords() {
 
             <div>
               <h3 className="font-extrabold text-slate-900 text-lg">Upload Medical Document</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Files are uploaded directly into private Supabase Storage buckets.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Securely attach and store your health records.</p>
             </div>
 
             {errorMsg && (
@@ -235,7 +230,7 @@ export default function PatientRecords() {
                   disabled={uploading}
                   className="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-semibold py-2.5 rounded-xl text-xs transition disabled:opacity-50 flex items-center justify-center space-x-1"
                 >
-                  {uploading ? <span>Uploading to Bucket...</span> : <span>Upload Record</span>}
+                  {uploading ? <span>Uploading Record...</span> : <span>Upload Record</span>}
                 </button>
               </div>
             </form>

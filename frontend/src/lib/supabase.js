@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Fallback resolver supporting Vite (import.meta.env) and Node/Process env
 const env = (typeof import.meta !== 'undefined' && import.meta.env) ? import.meta.env : (typeof process !== 'undefined' ? process.env : {});
 
 const supabaseUrl = env.VITE_SUPABASE_URL || 'https://qlfizttqpovyvurkrxvs.supabase.co';

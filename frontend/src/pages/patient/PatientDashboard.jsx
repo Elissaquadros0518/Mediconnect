@@ -155,7 +155,7 @@ export default function PatientDashboard() {
 
       </div>
 
-      {/* 3. Last Recorded Clinical Vitals (From Hospital Visits) */}
+      {/* 3. Last Recorded Clinical Vitals */}
       <div className="bg-white border border-slate-200/80 rounded-3xl p-6 md:p-8 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <div>
