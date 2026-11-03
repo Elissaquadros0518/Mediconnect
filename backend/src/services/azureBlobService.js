@@ -18,7 +18,7 @@ export const ALLOWED_DOCUMENT_TYPES = Object.freeze({
 
 const accountUrl = process.env.AZURE_STORAGE_ACCOUNT_URL
   || 'https://mediconnectstorage01.blob.core.windows.net';
-const containerName = process.env.AZURE_STORAGE_CONTAINER || 'medical-documents';
+const containerName = process.env.AZURE_STORAGE_CONTAINER || 'medical-docs';
 const uploadSasTtlSeconds = Number(process.env.AZURE_BLOB_UPLOAD_SAS_TTL_SECONDS || 300);
 const downloadSasTtlSeconds = Number(process.env.AZURE_BLOB_DOWNLOAD_SAS_TTL_SECONDS || 120);
 const credential = new DefaultAzureCredential();
@@ -80,7 +80,8 @@ export async function createUploadSas(blobName) {
   if (!Number.isInteger(uploadSasTtlSeconds) || uploadSasTtlSeconds < 60 || uploadSasTtlSeconds > 600) {
     throw new Error('AZURE_BLOB_UPLOAD_SAS_TTL_SECONDS must be between 60 and 600.');
   }
-  return generateBlobSasUrl(blobName, BlobSASPermissions.parse('cw'), uploadSasTtlSeconds);
+  // Create permits a new Put Blob request but does not permit overwriting an existing blob.
+  return generateBlobSasUrl(blobName, BlobSASPermissions.parse('c'), uploadSasTtlSeconds);
 }
 
 export async function inspectUploadedBlob(blobName) {
@@ -89,8 +90,28 @@ export async function inspectUploadedBlob(blobName) {
   return { blobClient, properties };
 }
 
+export async function hasValidDocumentSignature(blobClient, mimeType, contentLength) {
+  const bytesToRead = Math.min(contentLength, 12);
+  const header = await blobClient.downloadToBuffer(0, bytesToRead);
+
+  switch (mimeType) {
+    case 'application/pdf':
+      return header.subarray(0, 5).toString('ascii') === '%PDF-';
+    case 'image/png':
+      return header.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    case 'image/jpeg':
+      return header.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+    case 'image/webp':
+      return header.subarray(0, 4).toString('ascii') === 'RIFF'
+        && header.subarray(8, 12).toString('ascii') === 'WEBP';
+    default:
+      return false;
+  }
+}
+
 export async function deleteBlob(blobClient) {
-  await blobClient.deleteIfExists();
+  const result = await blobClient.deleteIfExists();
+  return result.succeeded;
 }
 
 export async function createDownloadSas(blobName) {

@@ -43,15 +43,10 @@ export default function PatientRecordView() {
     loadAuthorizedRecord();
   }, [user?.id, patientId]);
 
-  const handleDownloadFile = async (path, title) => {
-    setDownloadingPath(path);
+  const handleDownloadFile = async (documentId, storagePath, title) => {
+    setDownloadingPath(documentId);
     try {
-      const url = await documentService.getDownloadUrl(path, title);
-      if (url) {
-        window.open(url, '_blank');
-      } else {
-        alert(`Generating short-lived Supabase Storage presigned URL for clinical review: ${title}... Download complete.`);
-      }
+      await documentService.downloadDocument(documentId, storagePath, title);
     } catch (err) {
       alert(`Could not download file: ${err.message}`);
     } finally {
@@ -212,11 +207,11 @@ export default function PatientRecordView() {
                     <p className="text-xs text-slate-500">Uploaded {rep.date} • {rep.size}</p>
                   </div>
                   <button 
-                    disabled={downloadingPath === rep.path}
-                    onClick={() => handleDownloadFile(rep.path, rep.title)}
+                    disabled={downloadingPath === rep.id}
+                    onClick={() => handleDownloadFile(rep.id, rep.path, rep.title)}
                     className="bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold px-3.5 py-2 rounded-xl text-xs flex items-center space-x-1.5 transition disabled:opacity-50"
                   >
-                    {downloadingPath === rep.path ? (
+                    {downloadingPath === rep.id ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
                       <Download className="w-3.5 h-3.5" />

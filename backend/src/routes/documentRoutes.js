@@ -3,7 +3,8 @@ import { getUploadUrl, completeUpload, getMyDocuments, getDownloadUrl } from '..
 import {
   completeAzureUpload,
   createAzureDownloadUrl,
-  createAzureUploadUrl
+  createAzureUploadUrl,
+  deleteAzureDocument
 } from '../controllers/azureDocumentController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -17,5 +18,6 @@ router.get('/:id/download-url', authenticateToken, getDownloadUrl);
 router.post('/azure/upload-url', authenticateToken, createAzureUploadUrl);
 router.post('/azure/complete-upload', authenticateToken, completeAzureUpload);
 router.get('/azure/:documentId/download-url', authenticateToken, createAzureDownloadUrl);
+router.delete('/azure/:documentId', authenticateToken, deleteAzureDocument);
 
 export default router;

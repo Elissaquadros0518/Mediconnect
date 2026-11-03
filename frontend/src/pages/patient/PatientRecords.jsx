@@ -35,14 +35,9 @@ export default function PatientRecords() {
     loadRecords();
   }, [user?.id]);
 
-  const handleDownloadReport = async (storagePath, recordTitle) => {
+  const handleDownloadReport = async (documentId, storagePath, recordTitle) => {
     try {
-      const url = await documentService.getDownloadUrl(storagePath);
-      if (url) {
-        window.open(url, '_blank');
-      } else {
-        alert(`Downloaded sample patient vault record: ${recordTitle}`);
-      }
+      await documentService.downloadDocument(documentId, storagePath, recordTitle);
     } catch (err) {
       alert(`Could not download file: ${err.message}`);
     }
@@ -142,7 +137,7 @@ export default function PatientRecords() {
                   </div>
                 </div>
                 <button 
-                  onClick={() => handleDownloadReport(rec.storagePath, rec.title)}
+                  onClick={() => handleDownloadReport(rec.id, rec.storagePath, rec.title)}
                   className="bg-sky-50 hover:bg-sky-100 text-sky-700 px-4 py-2 rounded-xl transition flex items-center space-x-1.5 text-xs font-semibold shrink-0"
                 >
                   <Download className="w-3.5 h-3.5" />

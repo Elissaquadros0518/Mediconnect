@@ -34,14 +34,9 @@ export default function PatientDashboard() {
     loadDashboardData();
   }, [user?.id]);
 
-  const handleDownload = async (storagePath, title) => {
+  const handleDownload = async (documentId, storagePath, title) => {
     try {
-      const url = await documentService.getDownloadUrl(storagePath);
-      if (url) {
-        window.open(url, '_blank');
-      } else {
-        alert(`Downloaded sample medical record: ${title}`);
-      }
+      await documentService.downloadDocument(documentId, storagePath, title);
     } catch (err) {
       alert(`Could not download file: ${err.message}`);
     }
@@ -288,7 +283,7 @@ export default function PatientDashboard() {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleDownload(rec.storagePath, rec.title)}
+                      onClick={() => handleDownload(rec.id, rec.storagePath, rec.title)}
                       className="text-xs bg-sky-50 text-sky-700 hover:bg-sky-100 font-semibold px-3.5 py-2 rounded-xl flex items-center space-x-1.5 transition shadow-sm"
                     >
                       <Download className="w-3.5 h-3.5" />
