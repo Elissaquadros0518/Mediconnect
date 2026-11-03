@@ -18,7 +18,7 @@ export function Sidebar() {
   if (!isPatient && !isDoctor && !isAdmin) return null;
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 min-h-[calc(100vh-4rem)] p-4 flex flex-col justify-between hidden md:flex">
+    <aside className="hidden md:flex sticky top-16 self-start h-[calc(100dvh-4rem)] w-64 shrink-0 flex-col justify-between overflow-y-auto overscroll-contain border-r border-slate-200 bg-white p-4">
       <div className="space-y-6">
         
         {/* Patient Sidebar Navigation */}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  User, Mail, Phone, MapPin, ShieldCheck, Save, ArrowLeft, 
+  User, Mail, Phone, MapPin, ShieldCheck, Save, 
   CheckCircle2, HeartPulse, Building, Loader2, AlertCircle,
   Calendar, Printer, AlertTriangle, Stethoscope, Droplet, QrCode
 } from 'lucide-react';
@@ -85,15 +85,6 @@ export default function PatientProfile() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto py-2">
-      
-      {/* Back Button */}
-      <button 
-        onClick={() => navigate('/patient/dashboard')}
-        className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to Patient Dashboard</span>
-      </button>
 
       {/* Top Banner with Health ID Card */}
       <div className="bg-gradient-to-r from-teal-800 via-teal-900 to-slate-900 rounded-3xl p-6 md:p-8 text-white shadow-lg border border-teal-700/30">
