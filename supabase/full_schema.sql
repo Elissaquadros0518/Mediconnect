@@ -227,6 +227,13 @@ CREATE TABLE IF NOT EXISTS public.medical_documents (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc', now())
 );
 
+-- Ensure storage_path column and unique index exist even if the table already existed without them
+ALTER TABLE public.medical_documents
+    ADD COLUMN IF NOT EXISTS storage_path TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS medical_documents_storage_path_key
+    ON public.medical_documents (storage_path);
+
 CREATE INDEX IF NOT EXISTS idx_med_doc_patient ON public.medical_documents(patient_id);
 
 -- H. VISIT_SUMMARIES TABLE
@@ -1078,5 +1085,8 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 GRANT SELECT ON public.specialties, public.profiles, public.doctor_profiles, public.availability_slots TO anon;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated;
+
+-- Refresh PostgREST schema cache
+NOTIFY pgrst, 'reload schema';
 
 COMMIT;
