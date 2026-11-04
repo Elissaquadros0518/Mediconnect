@@ -1,10 +1,16 @@
 
 import { supabase } from '../lib/supabase';
 
+// Validate UUIDs before sending them to UUID-based database columns.
+const isValidUUID = (value) => {
+  return typeof value === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+};
+
 export const doctorService = {
-  // Fetch approved and publicly visible doctors
+
+  // Fetch approved and publicly visible doctors.
   async getPublicDoctors() {
-    // First, fetch doctor profiles
     const { data: doctors, error: doctorError } = await supabase
       .from('doctor_profiles')
       .select(`
@@ -26,11 +32,10 @@ export const doctorService = {
       throw doctorError;
     }
 
-    if (!doctors || doctors.length === 0) {
+    if (!doctors?.length) {
       return [];
     }
 
-    // Fetch names from the profiles table
     const userIds = doctors.map(doc => doc.user_id);
 
     const { data: profiles, error: profileError } = await supabase
@@ -43,7 +48,6 @@ export const doctorService = {
       throw profileError;
     }
 
-    // Match doctor profiles with their user profiles
     const profileMap = new Map(
       (profiles || []).map(profile => [
         profile.id,
@@ -52,9 +56,10 @@ export const doctorService = {
     );
 
     return doctors.map(doc => ({
-      id: doc.id,
+      id: doc.id, // doctor_profiles.id (UUID)
+      user_id: doc.user_id, // profiles.id (UUID)
       name: profileMap.get(doc.user_id) || 'Registered Doctor',
-      specialty: doc.specialty,
+      specialty: doc.specialty || 'General',
       qualification: doc.qualification || 'Not provided',
       experience: doc.experience_years != null
         ? `${doc.experience_years} years`
@@ -62,16 +67,29 @@ export const doctorService = {
       location: 'Hospital Branch',
       rating: null,
       consultation_fee: doc.consultation_fee,
-      biography: doc.biography
+      biography: doc.biography || ''
     }));
   },
 
-  // Fetch available slots for selected doctor
+  // Fetch slots for a particular doctor and date.
   async getDoctorSlots(doctorProfileId, dateStr) {
-    if (!doctorProfileId) return [];
+    if (!doctorProfileId || !dateStr) {
+      return [];
+    }
 
-    const startOfDay = `${dateStr}T00:00:00.000Z`;
-    const endOfDay = `${dateStr}T23:59:59.999Z`;
+    if (!isValidUUID(doctorProfileId)) {
+      throw new Error(
+        'Invalid doctor profile ID. Expected doctor_profiles.id (UUID), not the authentication user ID.'
+      );
+    }
+
+    const startOfDay = new Date(
+      `${dateStr}T00:00:00`
+    ).toISOString();
+
+    const endOfDay = new Date(
+      `${dateStr}T23:59:59.999`
+    ).toISOString();
 
     const { data, error } = await supabase
       .from('availability_slots')
@@ -82,7 +100,13 @@ export const doctorService = {
       .order('start_time', { ascending: true });
 
     if (error) {
-      console.error('Availability slots error:', error);
+      console.error('Availability slots error:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+
       throw error;
     }
 
@@ -101,5 +125,93 @@ export const doctorService = {
         endTime: slot.end_time
       };
     });
+  },
+
+  // Create a new availability slot.
+  async createSlot(doctorProfileId, startTime, endTime) {
+    if (!doctorProfileId || !startTime || !endTime) {
+      throw new Error(
+        'Doctor profile ID, start time and end time are required.'
+      );
+    }
+
+    if (!isValidUUID(doctorProfileId)) {
+      throw new Error(
+        'Invalid doctor profile ID. Pass user.doctorProfile.id, not user.id.'
+      );
+    }
+
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime())
+    ) {
+      throw new Error('Invalid slot date or time.');
+    }
+
+    if (end <= start) {
+      throw new Error('End time must be after start time.');
+    }
+
+    const { data, error } = await supabase
+      .from('availability_slots')
+      .insert({
+        doctor_profile_id: doctorProfileId,
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        status: 'Available'
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Create availability slot error:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+
+      throw error;
+    }
+
+    return data;
+  },
+
+  // Delete an unbooked availability slot.
+  async deleteSlot(slotId) {
+    if (!slotId) {
+      throw new Error('Slot ID is required.');
+    }
+
+    const { data, error } = await supabase
+      .from('availability_slots')
+      .delete()
+      .eq('id', slotId)
+      .eq('status', 'Available')
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      console.error('Delete availability slot error:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error(
+        'Slot could not be deleted. It may already be booked or may not exist.'
+      );
+    }
+
+    return data;
   }
+
 };
