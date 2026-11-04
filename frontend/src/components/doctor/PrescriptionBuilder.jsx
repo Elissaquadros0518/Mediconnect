@@ -173,7 +173,7 @@ export default function PrescriptionBuilder({
 
           {/* Dosage */}
           <div>
-            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dosage / Strength</label>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Dosage</label>
             <input 
               type="text"
               placeholder="e.g. 500mg, 10mg..."

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
-  Bell, CheckCircle2, ArrowLeft, Trash2, ShieldCheck, ExternalLink, 
+  Bell, CheckCircle2, Trash2, ShieldCheck, ExternalLink, 
   Loader2, AlertCircle, Clock, Calendar
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { notificationService } from '../../services/notificationService';
+import { useNavigate } from 'react-router-dom';
 
 export default function DoctorNotifications() {
   const navigate = useNavigate();
@@ -53,15 +54,7 @@ export default function DoctorNotifications() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto py-2">
-      
-      {/* Back Button */}
-      <button 
-        onClick={() => navigate('/doctor/dashboard')}
-        className="inline-flex items-center space-x-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>Back to Dashboard</span>
-      </button>
+
 
       {/* Top Banner */}
       <div className="bg-gradient-to-r from-teal-700 via-teal-800 to-sky-900 rounded-3xl p-6 md:p-8 text-white shadow-md flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
