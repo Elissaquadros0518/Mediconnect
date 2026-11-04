@@ -119,7 +119,7 @@ export function Sidebar() {
           </div>
           <div>
             <p className="text-[11px] font-extrabold text-teal-900">MediConnect Cloud</p>
-            <p className="text-[10px] text-teal-700">AWS S3 Secured</p>
+            
           </div>
         </div>
       </div>
